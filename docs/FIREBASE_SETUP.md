@@ -136,8 +136,33 @@ Warnings:
   (`npx expo start -c`). Config is read at bundle time, so a hot reload will not
   pick it up and it will look like nothing happened.
 
-If you would rather not edit the repo yourself, just send the six values to the
-developer and skip the file edit. Send them as text, not a screenshot.
+### The easy way
+
+Do not retype them. From the project folder:
+
+```bash
+npm run firebase:config
+```
+
+Paste the whole `firebaseConfig` block, then press **Ctrl+Z** on Windows (or
+Ctrl+D on Mac/Linux). It parses the six values out of whatever shape you pasted,
+checks each one looks right, and writes `app.json` for you. It refuses an Android
+or iOS `appId`, which is the mistake section 2 is about.
+
+Then check the project is actually wired up, against the live API:
+
+```bash
+npm run firebase:verify -- you@yourdomain.com
+```
+
+That confirms the key and project resolve, that Email/Password is on, that
+password-reset mail is accepted, and that email-link sign-in works with the
+continue domain authorised. It creates one throwaway account and deletes it
+again, and sends two real emails to the address you give it. Every failure
+reports the exact Firebase error code and which console screen fixes it.
+
+If you would rather not touch the repo at all, just send the six values to the
+developer as text, not a screenshot.
 
 ---
 
