@@ -12,7 +12,7 @@ export const HERO = {
 export interface Feature {
   title: string
   body: string
-  icon: "target" | "map" | "check-square" | "clipboard" | "calendar" | "zap"
+  icon: "target" | "map" | "map-pin" | "check-square" | "clipboard" | "calendar" | "zap"
   route?: string
   cta?: string
   soon?: boolean
@@ -32,6 +32,12 @@ export const FEATURES: Feature[] = [
     icon: "map",
     route: "/states",
     cta: "Explore states",
+  },
+  {
+    title: "Telangana state quota",
+    body: "KNRUHS competent-authority cutoffs, local and non-local. Not covered yet.",
+    icon: "map-pin",
+    soon: true,
   },
   { title: "Syllabus Tracker", body: "Track every chapter across Physics, Chemistry and Biology.", icon: "check-square", soon: true },
   { title: "Mock Tests", body: "Take a mock and see the colleges that score would reach.", icon: "clipboard", soon: true },

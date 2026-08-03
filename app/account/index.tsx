@@ -92,6 +92,37 @@ export default function AccountScreen() {
 
       <View style={{ gap: space.sm }}>
         <Text variant="label" tone="muted">
+          Saved
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open watchlist"
+          onPress={() => router.push("/watchlist")}
+        >
+          {({ pressed }) => (
+            <Surface
+              borderRadius={radius.sm}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                opacity: pressed ? 0.7 : 1,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text variant="bodySm">Watchlist</Text>
+                <Text variant="caption" tone="muted">
+                  Colleges you are tracking
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={t.textMuted} />
+            </Surface>
+          )}
+        </Pressable>
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="label" tone="muted">
           Appearance
         </Text>
         <Surface

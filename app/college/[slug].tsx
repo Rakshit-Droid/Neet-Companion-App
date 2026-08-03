@@ -7,6 +7,7 @@ import { Surface } from "@/components/Surface"
 import { Text } from "@/components/Text"
 import { Segmented } from "@/components/Segmented"
 import { TrendBars } from "@/components/TrendBars"
+import { WatchButton } from "@/components/WatchButton"
 import { radius, space, useTheme } from "@/theme"
 import {
   CATEGORY_LABEL,
@@ -83,6 +84,8 @@ export default function CollegeDetailScreen() {
           <Stat label="Quotas" value={String(detail.quotas.length)} />
         </View>
       </Surface>
+
+      <WatchButton slug={college.slug} category={activeCategory} />
 
       <Surface style={{ gap: space.lg }}>
         <Segmented

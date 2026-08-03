@@ -161,10 +161,34 @@ export default function StateDetailScreen() {
         )}
       </Pressable>
 
+      <Surface style={{ gap: space.xs }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+          <Text variant="body" style={{ flex: 1 }}>
+            {stateName} state quota
+          </Text>
+          <View
+            style={{
+              paddingHorizontal: space.sm,
+              paddingVertical: 2,
+              borderRadius: radius.sm,
+              backgroundColor: t.surfaceAlt,
+            }}
+          >
+            <Text variant="label" tone="muted">
+              Coming soon
+            </Text>
+          </View>
+        </View>
+        <Text variant="bodySm" tone="secondary">
+          Roughly 85% of seats here are filled through {stateName}&apos;s own counselling, with
+          its own categories and local-candidate rules. Those cutoffs are not in this app yet.
+        </Text>
+      </Surface>
+
       <Surface variant="outline">
         <Text variant="caption" tone="muted">
-          Covers MCC counselling quotas only. {stateName} also runs its own state-quota
-          counselling for the majority of seats, which is not included here.
+          Everything above covers MCC counselling quotas only. Verify against mcc.nic.in and your
+          state authority before making a choice.
         </Text>
       </Surface>
     </Screen>
