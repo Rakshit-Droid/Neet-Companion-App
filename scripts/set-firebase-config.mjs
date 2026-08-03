@@ -50,7 +50,21 @@ const EXPECT = {
   },
 }
 
+/**
+ * A file path is the reliable route on Windows, where pasting several lines into
+ * a terminal and ending with Ctrl+Z is easy to get wrong. Falls back to stdin so
+ * piping still works.
+ */
 function read() {
+  const arg = process.argv[2]
+  if (arg) {
+    try {
+      return readFileSync(arg, "utf8")
+    } catch {
+      console.error(`Cannot read ${arg}`)
+      process.exit(1)
+    }
+  }
   try {
     return readFileSync(0, "utf8")
   } catch {
@@ -71,9 +85,11 @@ function parse(text) {
 const raw = read()
 if (!raw.trim()) {
   console.error(
-    "Nothing pasted.\n\n" +
-      "  npm run firebase:config\n" +
-      "  then paste the firebaseConfig block and press Ctrl+Z (Windows) or Ctrl+D.\n",
+    "Nothing to read.\n\n" +
+      "Easiest: save the firebaseConfig block to a file, then\n" +
+      "  npm run firebase:config -- firebase.txt\n\n" +
+      "Or pipe it in:\n" +
+      "  node scripts/set-firebase-config.mjs < firebase.txt\n",
   )
   process.exit(1)
 }

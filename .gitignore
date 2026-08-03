@@ -57,3 +57,6 @@ data/api-dump.json
 # generated native folders
 /ios
 /android
+
+# scratch file for pasting the firebaseConfig block into
+firebase.txt
