@@ -54,39 +54,59 @@ export default function AllIndiaQuotaScreen() {
   const [builtFor, setBuiltFor] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [shortfall, setShortfall] = useState(false)
+  /** Whether the current query is already paid for, so the price shown is true. */
+  const [alreadyPaid, setAlreadyPaid] = useState(false)
 
-  // Region and priority change the result, so they belong in the billing
-  // identity alongside rank, category and course.
-  const fingerprint = profile.rank
-    ? [
-        queryFingerprint({
-          mode: "rank",
-          value: profile.rank,
-          category: profile.category,
-          course: profile.course,
-        }),
-        region,
-        profile.priority,
-      ].join("|")
+  // Two keys, deliberately different.
+  //
+  // billingKey is the query itself. Region and priority are left out because
+  // they only re-order seats the same query already returned — charging someone
+  // for tapping a preference chip to see the same list sorted differently would
+  // be indefensible.
+  const billingKey = profile.rank
+    ? queryFingerprint({
+        mode: "rank",
+        value: profile.rank,
+        category: profile.category,
+        course: profile.course,
+      })
     : null
 
-  const stale = Boolean(list && builtFor && fingerprint && builtFor !== fingerprint)
+  // buildKey does include them, so the screen can tell that the visible list no
+  // longer matches the controls and offer a rebuild.
+  const buildKey = billingKey ? [billingKey, region, profile.priority].join("|") : null
+
+  const stale = Boolean(list && builtFor && buildKey && builtFor !== buildKey)
 
   // A shortfall notice is about one attempt, not a permanent state.
   useEffect(() => {
     setShortfall(false)
-  }, [fingerprint])
+  }, [buildKey])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!user || !billingKey) {
+      setAlreadyPaid(false)
+      return
+    }
+    wasRecentlyBilled(user.uid, billingKey).then((paid) => {
+      if (!cancelled) setAlreadyPaid(paid)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user, billingKey])
 
   const build = useCallback(async () => {
-    if (!profile.rank || !fingerprint || !user) return
+    if (!profile.rank || !billingKey || !buildKey || !user) return
     setBusy(true)
     setShortfall(false)
     try {
       // Charge before building only if this exact query has not already been
       // paid for today: going back to a previous combination is free.
-      const alreadyPaid = await wasRecentlyBilled(user.uid, fingerprint)
-      if (!alreadyPaid) {
-        const ok = await charge(PRICE.search, "search", `search:${user.uid}:${fingerprint}`, {
+      const paid = await wasRecentlyBilled(user.uid, billingKey)
+      if (!paid) {
+        const ok = await charge(PRICE.search, "search", `search:${user.uid}:${billingKey}`, {
           rank: profile.rank,
           category: profile.category,
           course: profile.course,
@@ -95,7 +115,8 @@ export default function AllIndiaQuotaScreen() {
           setShortfall(true)
           return
         }
-        await markBilled(user.uid, fingerprint)
+        await markBilled(user.uid, billingKey)
+        setAlreadyPaid(true)
       }
 
       setList(
@@ -108,11 +129,11 @@ export default function AllIndiaQuotaScreen() {
           limit: 40,
         }),
       )
-      setBuiltFor(fingerprint)
+      setBuiltFor(buildKey)
     } finally {
       setBusy(false)
     }
-  }, [profile, fingerprint, region, user, charge])
+  }, [profile, billingKey, buildKey, region, user, charge])
 
   if (!signedIn) {
     return (
@@ -169,6 +190,7 @@ export default function AllIndiaQuotaScreen() {
         stale={stale}
         hasList={Boolean(list)}
         balance={balance}
+        free={alreadyPaid}
         onPress={build}
       />
 
@@ -324,6 +346,7 @@ function BuildBar({
   stale,
   hasList,
   balance,
+  free,
   onPress,
 }: {
   disabled: boolean
@@ -331,19 +354,23 @@ function BuildBar({
   stale: boolean
   hasList: boolean
   balance: number
+  free: boolean
   onPress: () => void
 }) {
+  const price = free ? "free" : `${PRICE.search} credits`
   const label = !hasList
-    ? `Build my list — ${PRICE.search} credits`
+    ? `Build my list — ${price}`
     : stale
-      ? `Rebuild with these changes — ${PRICE.search} credits`
-      : `Rebuild — ${PRICE.search} credits`
+      ? `Rebuild with these changes — ${price}`
+      : `Rebuild — ${price}`
 
   return (
     <View style={{ gap: space.xs }}>
       <Button label={label} onPress={onPress} disabled={disabled || busy} loading={busy} />
       <Text variant="caption" tone="muted" style={{ textAlign: "center" }}>
-        {balance} credits left. Repeating the same search within a day is free.
+        {free
+          ? `Already paid for this rank and category today. ${balance} credits left.`
+          : `${balance} credits left. Preferences only re-order what you already paid for.`}
       </Text>
     </View>
   )
