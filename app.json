@@ -14,7 +14,7 @@
     "android": {
       "package": "me.techefy.neetcompanion",
       "adaptiveIcon": {
-        "backgroundColor": "#FDC700",
+        "backgroundColor": "#7CCF00",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

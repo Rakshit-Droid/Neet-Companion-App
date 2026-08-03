@@ -1,9 +1,9 @@
 # NEET Companion — Design System
 
 **Style:** Flat Design Mobile (Touch-First). Light and dark, both first-class.
-**Palette source:** shadcn preset `b84oyNnJ7Q` — amber primary on neutral greys, `--radius: 0.875rem`.
+**Palette source:** shadcn preset `b84oyNnJ7Q` neutrals, with the brand lime as primary, `--radius: 0.875rem`.
 
-**Superseded:** pure neumorphism (v1), then brand lime (v2). Neumorphism was dropped once the app became data-dense: soft dual shadows gave no hierarchy across long result lists, capped contrast, blocked dark mode, and cost GPU time per row. Lime was replaced by this preset.
+**Superseded:** pure neumorphism (v1). Dropped once the app became data-dense: soft dual shadows gave no hierarchy across long result lists, capped contrast, blocked dark mode, and cost GPU time per row. A shadcn preset briefly supplied an amber primary; the neutrals were kept, the amber was not.
 
 **Kept throughout:** Quantico display type, and the flat no-shadow architecture.
 
@@ -14,7 +14,7 @@
 ## 1. Principles
 
 1. **No shadows.** `shadowOpacity: 0`, `elevation: 0`, no `boxShadow`. Hierarchy is fill, weight, spacing.
-2. **Colour carries meaning.** Amber marks brand and selection. The tier scale marks confidence.
+2. **Colour carries meaning.** Lime marks brand and selection. The tier scale marks confidence.
 3. **One accent.** Tier colours are semantic, not accents.
 4. **Both schemes always**, and every pairing measured.
 
@@ -34,9 +34,9 @@ Source of truth: [src/theme/index.ts](src/theme/index.ts). All ratios computed, 
 | `text` | `#0A0A0A` | `--foreground` | 19.80 AAA | — |
 | `textSecondary` | `#18181B` | `--secondary-foreground` | 18.1 AAA | — |
 | `textMuted` | `#646464` | **corrected** | 5.92 AA | 5.38 AA |
-| `accent` | `#FDC700` | `--primary` | fill only | — |
-| `accentText` | `#8F5A06` | **derived** | 5.78 AA | 5.26 AA |
-| `onAccent` | `#733E0A` | `--primary-foreground` | 5.51 AA on amber | — |
+| `accent` | `#7CCF00` | **brand lime** | fill only | — |
+| `accentText` | `#3F6600` | **brand, darkened** | 6.75 AA | 6.14 AA |
+| `onAccent` | `#12200A` | **brand** | 8.72 AAA on lime | — |
 
 ### Dark
 
@@ -47,18 +47,18 @@ Source of truth: [src/theme/index.ts](src/theme/index.ts). All ratios computed, 
 | `border` | `#27272A` | `--secondary` | — | — |
 | `text` | `#FAFAFA` | `--foreground` | 18.97 AAA | — |
 | `textMuted` | `#A1A1A1` | `--muted-foreground` | 7.66 AAA | 6.94 AA |
-| `accent` | `#F0B100` | `--primary` | fill only | — |
-| `accentText` | `#F0B100` | `--primary` | 10.36 AAA | — |
-| `onAccent` | `#733E0A` | `--primary-foreground` | 4.54 AA on amber | — |
+| `accent` | `#9AE600` | **brand lime** | fill only | — |
+| `accentText` | `#9AE600` | **brand lime** | 12.91 AAA | 11.69 AAA |
+| `onAccent` | `#12200A` | **brand** | 11.07 AAA on lime | — |
 
 ### Two corrections to the preset
 
 The preset is not contrast-safe as shipped. Both defects were fixed, not inherited:
 
 1. **`--muted-foreground` `#737373` measures 4.31 on the card surface — fails AA** for body text. Darkened to `#646464` (5.38).
-2. **`--primary` `#FDC700` as text on white measures 1.57 — fails outright.** Light mode uses a derived `#8F5A06` (5.78). Dark mode can use the amber directly at 10.36.
+2. **The preset's `--primary` was replaced entirely** by the brand lime from `logo-lime.png`. Lime has the same trap: raw `#7CCF00` as text on white measures 1.95 and fails, so light mode uses the darkened `#3F6600` (6.75). Dark mode can use `#9AE600` directly at 12.91.
 
-**Never put white on the amber fill** — it measures 1.57. Use `onAccent` (`#733E0A`).
+**Never put white on the lime fill** — it measures 1.95 and fails outright. Use `onAccent` (`#12200A`), which measures 8.72 AAA.
 
 ### Tier scale
 
@@ -70,7 +70,7 @@ The preset ships only `--destructive`, so the confidence scale was built out. Al
 | Moderate | `#9A4A00` 6.26 AA | 5.49 AA | `#FDBA74` 11.74 AAA | 9.80 AAA |
 | Reach | `#C10007` 6.42 AA | 5.43 AA | `#FF6467` 6.85 AA | 5.99 AA |
 
-Moderate is a burnt orange rather than amber so it never reads as the brand.
+The brand is a green, so **Safe is a teal-green, never a lime-green** — otherwise selection and confidence read as the same signal. Moderate is a burnt orange for the same reason.
 
 ---
 
@@ -112,8 +112,8 @@ Motion is functional only: press feedback is an opacity change at 120ms. No spri
 
 | Component | Behaviour |
 |---|---|
-| `Surface` | `card` (surface + hairline), `accent` (solid amber), `outline`, `plain` |
-| `Segmented` | Selected chip is a solid amber fill. `collapseAfter` hides overflow behind "+N more" and auto-expands if the selection is hidden |
+| `Surface` | `card` (surface + hairline), `accent` (solid lime), `outline`, `plain` |
+| `Segmented` | Selected chip is a solid lime fill. `collapseAfter` hides overflow behind "+N more" and auto-expands if the selection is hidden |
 | `Field` | Label above, hint or error below. Focus is a 2px accent border |
 | `TabBar` | Solid, edge-anchored, hairline top. Active tab gets a 2px accent rule |
 | `TierBadge` | Filled chip on the three-step confidence scale |
@@ -125,7 +125,7 @@ Theme resolution lives in `src/theme/ThemeProvider.tsx`. Tokens are in `src/them
 
 ## 6. Rules
 
-- Never white text on the amber fill.
+- Never white text on the lime fill.
 - Raw `accent` is never text in light mode; use `accentText`.
 - Long lists page rather than render whole (`PAGE = 30`).
 - `app.json` must keep `userInterfaceStyle: "automatic"`, otherwise native builds lock to light and dark mode never appears.

@@ -42,10 +42,11 @@ const light: Palette = {
   // AA for body text, so it is darkened just enough to pass.
   textMuted: "#646464", // 5.92 on bg, 5.38 on surface
 
-  accent: "#FDC700", // --primary
-  // Raw amber as text is 1.57 and unusable, same trap as the lime it replaces.
-  accentText: "#8F5A06", // 5.78 AA
-  onAccent: "#733E0A", // --primary-foreground, 5.51 AA on amber
+  // Brand lime, from logo-lime.png (#8FE207) and the site's own --primary token.
+  accent: "#7CCF00",
+  // Raw lime as text is 1.95 and unusable; this is the darkened form.
+  accentText: "#3F6600", // 6.75 AA on bg, 6.14 AA on surface
+  onAccent: "#12200A", // 8.72 AAA on lime; white would be 1.95 and fail
 
   // The preset ships only --destructive, so the confidence scale is built out.
   safe: "#0E6B52", // 6.47 AA
@@ -67,9 +68,9 @@ const dark: Palette = {
   textSecondary: "#E4E4E7",
   textMuted: "#A1A1A1", // --muted-foreground, 7.66 AAA
 
-  accent: "#F0B100", // --primary
-  accentText: "#F0B100", // 10.36 AAA on the dark background
-  onAccent: "#733E0A", // --primary-foreground, 4.54 AA on amber
+  accent: "#9AE600",
+  accentText: "#9AE600", // 12.91 AAA on bg, 11.69 AAA on surface
+  onAccent: "#12200A", // 11.07 AAA on lime
 
   safe: "#2DD4A7", // 10.45 AAA
   moderate: "#FDBA74", // 11.74 AAA
