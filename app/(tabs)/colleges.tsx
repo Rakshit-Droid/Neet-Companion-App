@@ -8,23 +8,41 @@ import { Text } from "@/components/Text"
 import { Field } from "@/components/Field"
 import { Segmented } from "@/components/Segmented"
 import { radius, space } from "@/theme"
-import { COLLEGES, REGIONS, type Region } from "@/lib/predictors"
+import {
+  COLLEGE_TYPES,
+  COURSES,
+  LATEST_CUTOFF_YEAR,
+  REGIONS,
+  directoryRows,
+  formatIndian,
+  type Course,
+  type Region,
+} from "@/lib/predictors"
 
 const ALL = "All" as const
 type RegionFilter = typeof ALL | Region
+type TypeFilter = typeof ALL | string
+type CourseFilter = typeof ALL | Course
 
-/** Long lists need paging, not dumping: 604 cards would stall the scroller. */
-const PAGE = 30
+/** Long lists page rather than render whole: 604 cards would stall the scroller. */
+const PAGE = 25
 
 export default function CollegesScreen() {
   const [query, setQuery] = useState("")
   const [region, setRegion] = useState<RegionFilter>(ALL)
+  const [type, setType] = useState<TypeFilter>(ALL)
+  const [course, setCourse] = useState<CourseFilter>(ALL)
   const [shown, setShown] = useState(PAGE)
+
+  const rows = useMemo(() => directoryRows(), [])
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return COLLEGES.filter((c) => {
+    return rows.filter((r) => {
+      const c = r.college
       if (region !== ALL && c.region !== region) return false
+      if (type !== ALL && c.type !== type) return false
+      if (course !== ALL && !r.courses.includes(course)) return false
       if (!q) return true
       return (
         c.name.toLowerCase().includes(q) ||
@@ -32,8 +50,9 @@ export default function CollegesScreen() {
         c.state.toLowerCase().includes(q)
       )
     })
-  }, [query, region])
+  }, [rows, query, region, type, course])
 
+  const reset = () => setShown(PAGE)
   const visible = results.slice(0, shown)
 
   return (
@@ -44,10 +63,28 @@ export default function CollegesScreen() {
           value={query}
           onChangeText={(v) => {
             setQuery(v)
-            setShown(PAGE)
+            reset()
           }}
           placeholder="College or state"
           keyboardType="default"
+        />
+        <Segmented
+          label="Course"
+          options={[ALL, ...COURSES] as CourseFilter[]}
+          value={course}
+          onChange={(v) => {
+            setCourse(v)
+            reset()
+          }}
+        />
+        <Segmented
+          label="Type"
+          options={[ALL, ...COLLEGE_TYPES] as TypeFilter[]}
+          value={type}
+          onChange={(v) => {
+            setType(v)
+            reset()
+          }}
         />
         <Segmented
           label="Region"
@@ -55,31 +92,38 @@ export default function CollegesScreen() {
           value={region}
           onChange={(v) => {
             setRegion(v)
-            setShown(PAGE)
+            reset()
           }}
+          collapseAfter={4}
         />
       </Surface>
 
       <Text variant="label" tone="muted">
-        {results.length} {results.length === 1 ? "college" : "colleges"}
+        {visible.length} of {results.length}
+        {results.length !== rows.length ? ` filtered from ${rows.length}` : " colleges"}
       </Text>
 
       <View style={{ gap: space.sm }}>
-        {visible.map((college) => (
+        {visible.map((r) => (
           <Pressable
-            key={college.slug}
+            key={r.college.slug}
             accessibilityRole="button"
-            accessibilityLabel={`Open ${college.name}`}
-            onPress={() => router.push(`/college/${college.slug}`)}
+            accessibilityLabel={`Open ${r.college.name}`}
+            onPress={() => router.push(`/college/${r.college.slug}`)}
           >
             {({ pressed }) => (
               <Surface
                 borderRadius={radius.sm}
                 style={{ gap: space.xs, opacity: pressed ? 0.7 : 1 }}
               >
-                <Text variant="body">{college.name}</Text>
+                <Text variant="body">{r.college.name}</Text>
                 <Text variant="bodySm" tone="muted">
-                  {college.state}, {college.type}
+                  {r.college.state}, {r.college.type}
+                </Text>
+                <Text variant="caption" tone={r.closing ? "accent" : "muted"}>
+                  {r.closing
+                    ? `${formatIndian(r.closing)} closing rank, ${r.course}, ${LATEST_CUTOFF_YEAR}`
+                    : `No ${LATEST_CUTOFF_YEAR} cutoff recorded`}
                 </Text>
               </Surface>
             )}
@@ -89,7 +133,7 @@ export default function CollegesScreen() {
         {results.length === 0 ? (
           <Surface>
             <Text variant="bodyRegular" tone="secondary">
-              Nothing matches “{query}”.
+              Nothing matches these filters. Try widening the course, type or region.
             </Text>
           </Surface>
         ) : null}

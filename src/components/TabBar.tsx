@@ -9,8 +9,9 @@ import { layout, space, useTheme } from "@/theme"
 import { Text } from "./Text"
 
 const ICONS: Record<string, keyof typeof Feather.glyphMap> = {
+  home: "home",
   index: "target",
-  colleges: "home",
+  colleges: "grid",
   states: "map",
   "choice-filling": "list",
 }

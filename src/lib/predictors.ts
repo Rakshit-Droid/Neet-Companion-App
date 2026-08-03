@@ -447,6 +447,181 @@ export function collegeDetail(slug: string): CollegeDetail | null {
   }
 }
 
+// -- year-on-year movement ----------------------------------------------------
+
+export interface YearDelta {
+  current: number
+  previous: number | null
+  /** Positive means the closing rank rose, which is easier to get into. */
+  change: number | null
+  direction: "easier" | "harder" | "flat" | "new"
+}
+
+/**
+ * A rising closing rank means the last admitted candidate had a worse rank, so
+ * the college got *easier*. The sign is counter-intuitive, hence the label.
+ */
+export function yearDelta(points: { year: number; closing: number }[]): YearDelta | null {
+  if (points.length === 0) return null
+  const sorted = [...points].sort((a, b) => a.year - b.year)
+  const current = sorted[sorted.length - 1]!
+  const previous = sorted.length > 1 ? sorted[sorted.length - 2]! : null
+
+  if (!previous) {
+    return { current: current.closing, previous: null, change: null, direction: "new" }
+  }
+
+  const change = current.closing - previous.closing
+  return {
+    current: current.closing,
+    previous: previous.closing,
+    change,
+    direction: change > 0 ? "easier" : change < 0 ? "harder" : "flat",
+  }
+}
+
+export interface SeatMatrixRow {
+  category: Category
+  byQuota: Record<string, number>
+  total: number
+}
+
+/** Seats in the latest year as category rows by quota, matching the site's table. */
+export function seatMatrix(slug: string): { quotas: string[]; rows: SeatMatrixRow[]; total: number } {
+  const detail = collegeDetail(slug)
+  if (!detail) return { quotas: [], rows: [], total: 0 }
+
+  const quotas = [...new Set(detail.rounds.map((r) => r.quota))].sort()
+  const rows: SeatMatrixRow[] = []
+
+  for (const category of detail.categories) {
+    const forCategory = detail.rounds.filter((r) => r.category === category)
+    if (forCategory.length === 0) continue
+    const byQuota: Record<string, number> = {}
+    for (const q of quotas) {
+      const seats = forCategory.filter((r) => r.quota === q).reduce((n, r) => n + r.seats, 0)
+      if (seats > 0) byQuota[q] = seats
+    }
+    const total = Object.values(byQuota).reduce((n, v) => n + v, 0)
+    if (total > 0) rows.push({ category, byQuota, total })
+  }
+
+  return { quotas, rows, total: rows.reduce((n, r) => n + r.total, 0) }
+}
+
+// -- state rollups, richer ----------------------------------------------------
+
+export interface StateStats {
+  colleges: number
+  byCourse: Record<Course, number>
+  /** Mean of each college's tightest General closing rank in the latest year. */
+  averageClosing: number | null
+}
+
+export function stateStats(slug: string): StateStats | null {
+  const matched = COLLEGES.map((c, i) => ({ c, i })).filter(
+    (x) => slugify(x.c.state) === slug,
+  )
+  if (matched.length === 0) return null
+
+  const byCourse = { MBBS: 0, BDS: 0, "B.Sc. Nursing": 0 } as Record<Course, number>
+  const closings: number[] = []
+
+  for (const { i } of matched) {
+    const courses = coursesFor(i)
+    for (const course of courses) byCourse[course]++
+    const best = bestClosingFor(i)
+    if (best !== null) closings.push(best)
+  }
+
+  return {
+    colleges: matched.length,
+    byCourse,
+    averageClosing: closings.length
+      ? Math.round(closings.reduce((n, v) => n + v, 0) / closings.length)
+      : null,
+  }
+}
+
+export interface StateCollege {
+  college: College
+  index: number
+  closing: number | null
+  course: Course | null
+  category: Category | null
+  round: string | null
+  courses: Course[]
+}
+
+/** Colleges in a state with their headline latest-year cutoff, for list rows. */
+export function collegesInState(slug: string): StateCollege[] {
+  return COLLEGES.map((college, index) => ({ college, index }))
+    .filter((x) => slugify(x.college.state) === slug)
+    .map(({ college, index }) => {
+      const latest = CUTOFFS.filter(
+        (c) => c.college === index && c.year === LATEST_CUTOFF_YEAR,
+      ).sort((a, b) => a.closing - b.closing)
+      const head = latest[0] ?? null
+      const round =
+        head &&
+        ROUNDS.filter(
+          (r) =>
+            r.college === index &&
+            r.year === head.year &&
+            r.category === head.category &&
+            r.course === head.course &&
+            r.closing === head.closing,
+        )[0]?.round
+      return {
+        college,
+        index,
+        closing: head?.closing ?? null,
+        course: head?.course ?? null,
+        category: head?.category ?? null,
+        round: round ?? null,
+        courses: coursesFor(index),
+      }
+    })
+    .sort((a, b) => (a.closing ?? Infinity) - (b.closing ?? Infinity))
+}
+
+/** Latest headline cutoff for every college, used by the directory rows. */
+export function directoryRows(): StateCollege[] {
+  return COLLEGES.map((college, index) => {
+    const latest = CUTOFFS.filter(
+      (c) => c.college === index && c.year === LATEST_CUTOFF_YEAR,
+    ).sort((a, b) => a.closing - b.closing)
+    const head = latest[0] ?? null
+    return {
+      college,
+      index,
+      closing: head?.closing ?? null,
+      course: head?.course ?? null,
+      category: head?.category ?? null,
+      round: null,
+      courses: coursesFor(index),
+    }
+  })
+}
+
+export const COLLEGE_TYPES: string[] = [...new Set(COLLEGES.map((c) => c.type))].sort()
+
+/** State codes grouped by region, so the predictor can filter without a picker. */
+export const STATES_BY_REGION: Record<Region, string[]> = REGIONS.reduce(
+  (acc, region) => {
+    acc[region] = Object.entries(STATE_INFO)
+      .filter(([, info]) => info.region === region)
+      .map(([code]) => code)
+    return acc
+  },
+  {} as Record<Region, string[]>,
+)
+
+export const PLATFORM_TOP_STATES = () =>
+  statesSummary()
+    .slice(0, 5)
+    .map((s) => ({ state: s.state, slug: s.slug, count: s.collegeCount }))
+
 export interface Faq {
   question: string
   answer: string

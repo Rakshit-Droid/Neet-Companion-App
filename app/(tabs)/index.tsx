@@ -15,12 +15,16 @@ import {
   COURSES,
   LATEST_CUTOFF_YEAR,
   MAX_MARKS,
+  REGIONS,
+  STATES_BY_REGION,
   formatIndian,
   marksToColleges,
   rankToColleges,
   type Category,
   type CollegeMatch,
   type Course,
+  type Region,
+  type Tier,
 } from "@/lib/predictors"
 
 /** The site splits these across four SEO pages; on mobile it is one input mode. */
@@ -34,6 +38,7 @@ export default function PredictorScreen() {
   const [rank, setRank] = useState("25000")
   const [category, setCategory] = useState<Category>("UR")
   const [course, setCourse] = useState<Course>("MBBS")
+  const [region, setRegion] = useState<"All" | Region>("All")
 
   const byScore = mode === "Score"
   const parsedMarks = Number(marks)
@@ -43,13 +48,23 @@ export default function PredictorScreen() {
     ? marks.length > 0 && Number.isFinite(parsedMarks) && parsedMarks >= 0 && parsedMarks <= MAX_MARKS
     : rank.length > 0 && Number.isFinite(parsedRank) && parsedRank > 0
 
+  const states = region === "All" ? undefined : STATES_BY_REGION[region]
+
   const result = useMemo(() => {
     if (!valid) return null
-    if (byScore) return marksToColleges(parsedMarks, category, course, { limit: 25 })
+    const options = { limit: 40, states }
+    if (byScore) return marksToColleges(parsedMarks, category, course, options)
     // Rank mode skips the score curve: the rank is already known.
-    const matches = rankToColleges(parsedRank, category, course, { limit: 25 })
-    return { ...matches, rank: null }
-  }, [valid, byScore, parsedMarks, parsedRank, category, course])
+    return { ...rankToColleges(parsedRank, category, course, options), rank: null }
+  }, [valid, byScore, parsedMarks, parsedRank, category, course, states])
+
+  // The site groups results into Safe, Moderate and Reach rather than one list.
+  const grouped = useMemo(() => {
+    if (!result) return []
+    return (["Safe", "Moderate", "Reach"] as Tier[])
+      .map((tier) => ({ tier, items: result.matches.filter((m) => m.tier === tier) }))
+      .filter((g) => g.items.length > 0)
+  }, [result])
 
   return (
     <Screen title="Score to college">
@@ -82,6 +97,13 @@ export default function PredictorScreen() {
           collapseAfter={5}
         />
         <Segmented label="Course" options={COURSES} value={course} onChange={setCourse} />
+        <Segmented
+          label="Region"
+          options={["All", ...REGIONS] as ("All" | Region)[]}
+          value={region}
+          onChange={setRegion}
+          collapseAfter={4}
+        />
       </Surface>
 
       {result ? (
@@ -121,12 +143,21 @@ export default function PredictorScreen() {
               </Text>
             </Surface>
           ) : (
-            <View style={{ gap: space.sm }}>
+            <View style={{ gap: space.lg }}>
               <Text variant="label" tone="muted">
                 {result.total} reachable {result.total === 1 ? "seat" : "seats"}
               </Text>
 
-              {result.matches.map((match: CollegeMatch) => (
+              {grouped.map((group) => (
+                <View key={group.tier} style={{ gap: space.sm }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+                    <TierBadge tier={group.tier} />
+                    <Text variant="label" tone="muted">
+                      {group.items.length} {group.items.length === 1 ? "seat" : "seats"}
+                    </Text>
+                  </View>
+
+                  {group.items.map((match: CollegeMatch) => (
                 <Pressable
                   key={`${match.slug}-${match.course}-${match.quota}`}
                   accessibilityRole="button"
@@ -145,7 +176,6 @@ export default function PredictorScreen() {
                     <Text variant="body" style={{ flex: 1 }}>
                       {match.name}
                     </Text>
-                    <TierBadge tier={match.tier} />
                   </View>
 
                   <Text variant="bodySm" tone="muted">
@@ -173,6 +203,8 @@ export default function PredictorScreen() {
                   </View>
                 </Surface>
                 </Pressable>
+                  ))}
+                </View>
               ))}
 
               {result.total > result.matches.length ? (

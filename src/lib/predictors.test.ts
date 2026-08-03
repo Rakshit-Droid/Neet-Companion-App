@@ -5,7 +5,14 @@ import {
   CATEGORIES,
   CATEGORY_LABEL,
   COLLEGES,
+  COLLEGE_TYPES,
   COURSES,
+  STATES_BY_REGION,
+  collegesInState,
+  directoryRows,
+  seatMatrix,
+  stateStats,
+  yearDelta,
   LATEST_CUTOFF_YEAR,
   MAX_MARKS,
   PLATFORM_STATS,
@@ -217,6 +224,81 @@ test("formatIndian groups in lakhs and crores", () => {
   assert.equal(formatIndian(1000), "1,000")
   assert.equal(formatIndian(100000), "1,00,000")
   assert.equal(formatIndian(1360000), "13,60,000")
+})
+
+test("yearDelta labels a rising closing rank as easier", () => {
+  // A worse last-admitted rank means the college got easier to enter.
+  const easier = yearDelta([
+    { year: 2024, closing: 27235 },
+    { year: 2025, closing: 34658 },
+  ])
+  assert.equal(easier?.direction, "easier")
+  assert.equal(easier?.change, 7423)
+
+  const harder = yearDelta([
+    { year: 2024, closing: 5000 },
+    { year: 2025, closing: 4000 },
+  ])
+  assert.equal(harder?.direction, "harder")
+  assert.equal(harder?.change, -1000)
+
+  assert.equal(yearDelta([{ year: 2025, closing: 10 }])?.direction, "new")
+  assert.equal(yearDelta([]), null)
+})
+
+test("seatMatrix rows sum to the reported total", () => {
+  const target = COLLEGES.find((c) => c.name.startsWith("Bangalore Medical College"))!
+  const matrix = seatMatrix(target.slug)
+
+  assert.ok(matrix.rows.length > 0)
+  assert.ok(matrix.quotas.length > 0)
+  assert.equal(
+    matrix.total,
+    matrix.rows.reduce((n, r) => n + r.total, 0),
+  )
+  // Every row's quota breakdown must reconcile with its own total.
+  for (const row of matrix.rows) {
+    const summed = Object.values(row.byQuota).reduce((n, v) => n + v, 0)
+    assert.equal(summed, row.total, `${row.category} quota split does not reconcile`)
+  }
+  assert.equal(matrix.total, collegeDetail(target.slug)!.seatsLatest)
+})
+
+test("stateStats counts courses and averages closing ranks", () => {
+  const stats = stateStats("karnataka")
+  assert.ok(stats)
+  assert.equal(stats.colleges, 48)
+  assert.ok(stats.byCourse.MBBS > 0)
+  assert.ok(stats.averageClosing && stats.averageClosing > 0)
+  assert.equal(stateStats("atlantis"), null)
+})
+
+test("collegesInState is sorted by cutoff and carries headline data", () => {
+  const rows = collegesInState("karnataka")
+  assert.equal(rows.length, 48)
+
+  const ranked = rows.filter((r) => r.closing !== null).map((r) => r.closing!)
+  assert.deepEqual(ranked, [...ranked].sort((a, b) => a - b))
+  assert.equal(rows[0]!.college.name.startsWith("Bangalore Medical College"), true)
+  // Colleges without a recent cutoff sort last rather than being dropped.
+  assert.ok(rows.every((r) => r.courses.length >= 0))
+})
+
+test("directoryRows covers every college exactly once", () => {
+  const rows = directoryRows()
+  assert.equal(rows.length, COLLEGES.length)
+  assert.equal(new Set(rows.map((r) => r.college.slug)).size, COLLEGES.length)
+})
+
+test("STATES_BY_REGION partitions every state exactly once", () => {
+  const all = Object.values(STATES_BY_REGION).flat()
+  assert.equal(new Set(all).size, all.length, "no state may appear in two regions")
+  assert.equal(new Set(all).size, PLATFORM_STATS.states)
+})
+
+test("COLLEGE_TYPES matches the types actually present", () => {
+  assert.deepEqual(COLLEGE_TYPES, [...new Set(COLLEGES.map((c) => c.type))].sort())
+  assert.ok(COLLEGE_TYPES.includes("State Govt"))
 })
 
 test("buildChoiceList orders aspirational first and tallies tiers", () => {

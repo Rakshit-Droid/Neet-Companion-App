@@ -14,6 +14,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: t.bg },
       }}
     >
+      <Tabs.Screen name="home" options={{ tabBarLabel: "Home" }} />
       <Tabs.Screen name="index" options={{ tabBarLabel: "Predict" }} />
       <Tabs.Screen name="colleges" options={{ tabBarLabel: "Colleges" }} />
       <Tabs.Screen name="states" options={{ tabBarLabel: "States" }} />

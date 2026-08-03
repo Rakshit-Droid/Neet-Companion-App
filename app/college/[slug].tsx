@@ -13,6 +13,8 @@ import {
   collegeDetail,
   faqsFor,
   formatIndian,
+  seatMatrix,
+  yearDelta,
   type Category,
   type Course,
 } from "@/lib/predictors"
@@ -48,6 +50,20 @@ export default function CollegeDetailScreen() {
   )
   const latestForCategory = latest.filter((c) => c.category === activeCategory)
   const categorySeats = detail.seatsFor(activeCategory, course === "all" ? undefined : course)
+  const delta = yearDelta(trend)
+
+  // One row per category with its own year-on-year movement.
+  const byCategory = categories
+    .map((cat) => {
+      const points = detail.trendFor(cat, course === "all" ? undefined : course)
+      if (points.length === 0) return null
+      const d = yearDelta(points)
+      return { category: cat, closing: d!.current, delta: d!.change }
+    })
+    .filter((r): r is { category: Category; closing: number; delta: number | null } => r !== null)
+    .sort((a, b) => a.closing - b.closing)
+
+  const matrix = seatMatrix(slug!)
 
   return (
     <Screen title={college.name} back>
@@ -100,7 +116,70 @@ export default function CollegeDetailScreen() {
               {categorySeats} of {seatsLatest} seats
             </Text>
           ) : null}
+          {delta && delta.change !== null ? (
+            <Text variant="bodySm" tone="onAccent" style={{ marginTop: space.xs }}>
+              {delta.direction === "easier" ? "Easier" : delta.direction === "harder" ? "Harder" : "Flat"}{" "}
+              than {latestYear - 1}, {delta.change > 0 ? "+" : ""}
+              {formatIndian(delta.change)}
+            </Text>
+          ) : null}
         </Surface>
+      ) : null}
+
+      {byCategory.length ? (
+        <View style={{ gap: space.sm }}>
+          <Text variant="label" tone="muted">
+            Every category, {latestYear}
+          </Text>
+          <Surface style={{ gap: space.sm }}>
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <Text variant="label" tone="muted" style={{ flex: 1.4 }}>
+                Category
+              </Text>
+              <Text variant="label" tone="muted" style={{ flex: 1, textAlign: "right" }}>
+                Closing
+              </Text>
+              <Text variant="label" tone="muted" style={{ flex: 1, textAlign: "right" }}>
+                vs {latestYear - 1}
+              </Text>
+            </View>
+            {byCategory.map((row) => (
+              <View
+                key={row.category}
+                style={{
+                  flexDirection: "row",
+                  gap: space.sm,
+                  alignItems: "center",
+                  paddingTop: space.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: t.border,
+                }}
+              >
+                <Text variant="bodySm" style={{ flex: 1.4 }}>
+                  {CATEGORY_LABEL[row.category]}
+                </Text>
+                <Text variant="bodySm" style={{ flex: 1, textAlign: "right" }}>
+                  {formatIndian(row.closing)}
+                </Text>
+                <Text
+                  variant="bodySm"
+                  tone={
+                    row.delta === null ? "muted" : row.delta > 0 ? "safe" : row.delta < 0 ? "reach" : "muted"
+                  }
+                  style={{ flex: 1, textAlign: "right" }}
+                >
+                  {row.delta === null
+                    ? "new"
+                    : `${row.delta > 0 ? "+" : ""}${formatIndian(row.delta)}`}
+                </Text>
+              </View>
+            ))}
+          </Surface>
+          <Text variant="caption" tone="muted">
+            A rising closing rank means the last admitted candidate had a worse rank, so the
+            college got easier to enter.
+          </Text>
+        </View>
       ) : null}
 
       {trend.length > 1 ? (
@@ -143,10 +222,83 @@ export default function CollegeDetailScreen() {
                   <Text variant="h2">{formatIndian(r.closing)}</Text>
                   <Text variant="caption" tone="muted">
                     {r.seats} {r.seats === 1 ? "seat" : "seats"}
+                    {i > 0
+                      ? `, ${r.closing - roundsForView[i - 1]!.closing > 0 ? "+" : ""}${formatIndian(
+                          r.closing - roundsForView[i - 1]!.closing,
+                        )}`
+                      : ""}
                   </Text>
                 </View>
               </View>
             ))}
+          </Surface>
+        </View>
+      ) : null}
+
+      {matrix.rows.length ? (
+        <View style={{ gap: space.sm }}>
+          <Text variant="label" tone="muted">
+            Seat matrix, {latestYear}
+          </Text>
+          <Surface style={{ gap: space.sm }}>
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <Text variant="label" tone="muted" style={{ flex: 1.4 }}>
+                Category
+              </Text>
+              {matrix.quotas.map((q) => (
+                <Text
+                  key={q}
+                  variant="label"
+                  tone="muted"
+                  numberOfLines={1}
+                  style={{ flex: 1, textAlign: "right" }}
+                >
+                  {q.replace(" Quota", "").replace("Seats", "").trim()}
+                </Text>
+              ))}
+              <Text variant="label" tone="muted" style={{ width: 42, textAlign: "right" }}>
+                Total
+              </Text>
+            </View>
+
+            {matrix.rows.map((row) => (
+              <View
+                key={row.category}
+                style={{
+                  flexDirection: "row",
+                  gap: space.sm,
+                  paddingTop: space.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: t.border,
+                }}
+              >
+                <Text variant="bodySm" style={{ flex: 1.4 }}>
+                  {CATEGORY_LABEL[row.category]}
+                </Text>
+                {matrix.quotas.map((q) => (
+                  <Text key={q} variant="bodySm" tone="muted" style={{ flex: 1, textAlign: "right" }}>
+                    {row.byQuota[q] ?? "—"}
+                  </Text>
+                ))}
+                <Text variant="body" style={{ width: 42, textAlign: "right" }}>
+                  {row.total}
+                </Text>
+              </View>
+            ))}
+
+            <View
+              style={{
+                flexDirection: "row",
+                paddingTop: space.sm,
+                borderTopWidth: 1,
+                borderTopColor: t.border,
+              }}
+            >
+              <Text variant="label" tone="muted" style={{ flex: 1 }}>
+                All categories
+              </Text>
+              <Text variant="body">{matrix.total}</Text>
+            </View>
           </Surface>
         </View>
       ) : null}
