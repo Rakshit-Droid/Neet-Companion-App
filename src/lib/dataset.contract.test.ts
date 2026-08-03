@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
 
 import data from "../data/neet-data.json"
-import { COLLEGES, LATEST_CUTOFF_YEAR, PLATFORM_STATS } from "./predictors"
+import { COLLEGES, LATEST_CUTOFF_YEAR } from "./predictors"
 
 // These assert that the SHIPPED BUNDLE is internally consistent and unchanged.
 // Behaviour lives in predictors.test.ts. Keeping the two apart means a data
@@ -31,12 +31,11 @@ test("bundle checksum is unchanged", (t) => {
   assert.equal(actual, KNOWN_BUNDLE_SHA256)
 })
 
-test("derived stats match the bundle they are derived from", () => {
-  assert.equal(PLATFORM_STATS.colleges, data.institutes.length)
-  assert.equal(PLATFORM_STATS.cutoffs, data.cutoffs.length)
-  assert.equal(PLATFORM_STATS.years, data.meta.cutoffYears.length)
-  assert.equal(PLATFORM_STATS.courses, data.courses.length)
-  assert.equal(PLATFORM_STATS.states, new Set(COLLEGES.map((c) => c.stateCode)).size)
+test("the decoded engine matches the bundle it was decoded from", () => {
+  // PLATFORM_STATS used to be asserted here. It was removed with the rest of
+  // the platform-stat surface, so this checks the decode itself instead — that
+  // every institute row became a college, which is what the screens rely on.
+  assert.equal(COLLEGES.length, data.institutes.length)
   assert.equal(LATEST_CUTOFF_YEAR, Math.max(...data.meta.cutoffYears))
 })
 
