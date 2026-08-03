@@ -30,8 +30,26 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files and credentials
+.env
 .env*.local
+key.txt
+*.credentials
+
+# scratch build output
+.tmp-*/
+
+# raw data pulls. src/data/neet-data.json is the committed, compacted bundle;
+# these are the multi-megabyte sources it is built from.
+data/db/
+data/api-dump.json
+
+# vendored third-party agent skills. Restore with:
+#   npx skills add Leonxlnx/taste-skill          (see skills-lock.json)
+#   git clone https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+#     then copy .claude/skills/ui-ux-pro-max into .claude/skills/
+.agents/
+.claude/skills/
 
 # typescript
 *.tsbuildinfo

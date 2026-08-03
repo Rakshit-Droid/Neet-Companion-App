@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": ".tmp-test"
+  },
+  "include": ["src/lib/**/*.ts", "src/data/**/*.json"]
+}
