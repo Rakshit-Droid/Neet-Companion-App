@@ -47,16 +47,22 @@ they are.
 
 ## Design
 
-One column, 520px, tables and inline styles. No external images, so nothing
-breaks when a client blocks remote content and there is no tracking pixel to
-justify.
+One column, 520px, tables and inline styles.
+
+The logo is the only remote asset — `public/email/logo-on-light.png` and
+`logo-on-dark.png`, served from the web build. A `data:` URI would avoid the
+request entirely, but **Gmail drops data-URI images**, so a hosted URL is the
+only option that works for this audience. Every logo carries `alt="NEET
+Companion"` styled to match the wordmark it replaced, so a blocked image still
+reads as the brand rather than a broken icon. There is no tracking pixel.
 
 Lime `#7ccf00` with `#12200a` text on it — measured 8.72:1. White on lime is
 1.95:1 and unusable, which is why no button uses it. Body text `#0a0a0a`, muted
 `#646464` (5.92:1 on white).
 
-The app's Quantico wordmark cannot be used: custom fonts do not load reliably in
-email. The letter-spaced bold sans in the header is the stand-in.
+The app's Quantico face is not used anywhere in the emails: custom fonts do not
+load reliably in mail clients. Everything is Helvetica/Arial, and the brand is
+carried by the logo instead.
 
 Product emails carry a `prefers-color-scheme: dark` block. The auth emails do not
 — Firebase's editor strips `<style>`, so they are light-only by necessity.
@@ -70,7 +76,10 @@ Send yourself one of each before launch. The three that break most often:
   come out square there. Acceptable, and the reason they are table cells rather
   than styled `<div>`s.
 - **Dark mode on iOS Mail** inverts colours it thinks are backgrounds. Check the
-  lime blocks in `referral-paid.html` still read.
+  lime blocks in `referral-paid.html` still read, and that the logo swapped to
+  the light-ink version.
+- **Images blocked** (the default in plenty of clients until you tap "show
+  images"): the header must still read "NEET Companion", not show a broken icon.
 
 Resend's dashboard shows every send with its delivery status, which beats
 guessing from Firebase.

@@ -159,7 +159,42 @@ They have no Firebase editor to survive, so they carry the full design.
 
 ---
 
-## 5. Under-18 recipients
+## 5. The logo
+
+Every template opens with the logo, top left. Two files, both served from the web
+build:
+
+| File in repo | Served at | Used when |
+|---|---|---|
+| `public/email/logo-on-light.png` | `/email/logo-on-light.png` | light background — always, for auth emails |
+| `public/email/logo-on-dark.png` | `/email/logo-on-dark.png` | dark background — product emails only |
+
+Anything in `public/` is copied to the root of the web export, so these deploy
+with the app and need no separate hosting.
+
+**Why not inline the logo as a `data:` URI.** It would be self-contained and
+immune to image blocking, and it is the obvious idea. **Gmail does not render
+`data:` URI images** — it drops them entirely, and Gmail is most of this
+audience. So the logo has to be a hosted `https://` URL, which means some clients
+will hide it until the reader taps "show images". That is why the `alt` text on
+every logo is styled to match the wordmark it replaced: with images blocked, the
+email still opens with "NEET Companion" in the right place and weight rather than
+a broken-image icon.
+
+**The dark variant is swapped by the same `prefers-color-scheme` query that
+darkens the card**, not a separate one. They cannot disagree: a client that
+supports the query gets the dark card and the light-ink logo together, and one
+that does not gets the light card and the dark-ink logo together. Auth emails
+have no `<style>` block to swap in — Firebase strips it — so they are light-only
+and use the dark-ink logo unconditionally.
+
+**If the app moves to a custom domain**, the `src` on both images in all seven
+templates has to change with it. They are absolute URLs; there is no base tag to
+edit in one place, because email clients ignore `<base>`.
+
+---
+
+## 6. Under-18 recipients
 
 The audience is largely 17–18. Under India's DPDP Act 2023 an under-18 is a
 child, and behavioural or promotional emailing to children is restricted.
@@ -171,7 +206,7 @@ age and consent first.
 
 ---
 
-## 6. Checklist
+## 7. Checklist
 
 - [ ] Domain added in Resend and all DNS records verified, DKIM included
 - [ ] DMARC record added at `p=none`
@@ -182,3 +217,4 @@ age and consent first.
 - [ ] Sign-in link template: body pasted, `%LINK%` intact
 - [ ] Vercel domain listed under Authorized domains
 - [ ] API key is nowhere in the repo
+- [ ] Logo loads at `/email/logo-on-light.png` on the deployed domain
