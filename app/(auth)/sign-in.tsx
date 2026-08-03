@@ -87,8 +87,13 @@ export default function SignInScreen() {
       </Surface>
 
       <View style={{ gap: space.sm, alignItems: "center" }}>
-        <Pressable accessibilityRole="button" onPress={() => router.push("/forgot-password")}>
+        <Pressable accessibilityRole="button" onPress={() => router.push("/magic-link")}>
           <Text variant="bodySm" tone="accent">
+            Email me a sign-in link instead
+          </Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.push("/forgot-password")}>
+          <Text variant="bodySm" tone="secondary">
             Forgot your password?
           </Text>
         </Pressable>

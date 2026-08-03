@@ -51,7 +51,8 @@
         "storageBucket": "",
         "messagingSenderId": "",
         "appId": ""
-      }
+      },
+      "magicLinkUrl": "https://neet-companion-app-five.vercel.app/magic-link"
     }
   }
 }

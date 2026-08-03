@@ -177,6 +177,55 @@ export async function mockSendReset(email: string): Promise<void> {
   if (!normalise(email).includes("@")) throw new MockAuthError("auth/invalid-email")
 }
 
+// -- magic link ---------------------------------------------------------------
+
+/**
+ * There is no mailbox, so the "sent" link is handed straight back for the screen
+ * to show. That makes the flow walkable end to end — request, follow, land
+ * signed in — without waiting on Firebase.
+ */
+const MOCK_LINK_PREFIX = "neetcompanion://magic-link?token="
+
+export async function mockSendMagicLink(email: string): Promise<{ devLink: string }> {
+  const address = normalise(email)
+  if (!address.includes("@")) throw new MockAuthError("auth/invalid-email")
+
+  const users = await readUsers()
+  if (!users.some((u) => u.email === address)) {
+    // Email-link sign-in creates the account if it does not exist, matching
+    // Firebase. The password is unreachable — this account signs in by link.
+    users.push({
+      uid: `mock-${Date.now().toString(36)}`,
+      email: address,
+      password: `link-only-${Date.now().toString(36)}`,
+      displayName: null,
+    })
+    await writeUsers(users)
+  }
+  return { devLink: MOCK_LINK_PREFIX + encodeURIComponent(address) }
+}
+
+export function mockIsMagicLink(url: string): boolean {
+  return url.startsWith(MOCK_LINK_PREFIX)
+}
+
+export async function mockCompleteMagicLink(url: string, email: string): Promise<AuthUser> {
+  if (!mockIsMagicLink(url)) throw new MockAuthError("auth/invalid-action-code")
+
+  const token = decodeURIComponent(url.slice(MOCK_LINK_PREFIX.length))
+  // The link is bound to the address it was issued for, so a link for one
+  // account cannot be redeemed against another.
+  if (token !== normalise(email)) throw new MockAuthError("auth/invalid-action-code")
+
+  const users = await readUsers()
+  const rec = users.find((u) => u.email === token)
+  if (!rec) throw new MockAuthError("auth/invalid-action-code")
+
+  const user = publicUser(rec)
+  await setSession(user)
+  return user
+}
+
 export async function mockSignOut(): Promise<void> {
   await setSession(null)
 }
