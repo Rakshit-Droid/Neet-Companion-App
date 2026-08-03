@@ -927,6 +927,24 @@ export const PLATFORM_STATS = {
   years: data.meta.cutoffYears.length,
 }
 
+/**
+ * Identity of a search, for billing. Region is deliberately excluded: the server
+ * returns the unfiltered list and the client narrows it locally, so changing
+ * region never costs a credit.
+ *
+ * Charging is keyed to this, once per 24h, because the predictor recomputes on
+ * every keystroke and chip tap. Billing raw recomputes would cost a user roughly
+ * 24 credits in a minute of ordinary exploration.
+ */
+export function queryFingerprint(input: {
+  mode: "score" | "rank"
+  value: number
+  category: Category
+  course: Course | "all"
+}): string {
+  return [input.mode, Math.round(input.value), input.category, input.course].join("|")
+}
+
 export function formatIndian(n: number): string {
   const rounded = Math.round(n)
   // Sign is stripped before grouping: otherwise "-773" is four characters and

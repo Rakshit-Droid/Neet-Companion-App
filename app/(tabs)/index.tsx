@@ -8,6 +8,7 @@ import { Text } from "@/components/Text"
 import { Field } from "@/components/Field"
 import { Segmented } from "@/components/Segmented"
 import { TierBadge } from "@/components/TierBadge"
+import { Button } from "@/components/Button"
 import { layout, radius, space, useTheme } from "@/theme"
 import {
   CATEGORIES,
@@ -19,6 +20,7 @@ import {
   STATES_BY_REGION,
   formatIndian,
   marksToColleges,
+  queryFingerprint,
   rankToColleges,
   type Category,
   type CollegeMatch,
@@ -48,15 +50,61 @@ export default function PredictorScreen() {
     ? marks.length > 0 && Number.isFinite(parsedMarks) && parsedMarks >= 0 && parsedMarks <= MAX_MARKS
     : rank.length > 0 && Number.isFinite(parsedRank) && parsedRank > 0
 
+  // A search is an explicit act, not a side effect of typing. Results are held
+  // until the user asks again, because this call is metered: one charge per
+  // query fingerprint per day. Recomputing on every keystroke would bill a user
+  // roughly 24 credits for a minute of ordinary exploration.
+  const [submitted, setSubmitted] = useState<{
+    byScore: boolean
+    value: number
+    category: Category
+    course: Course
+  } | null>({ byScore: true, value: 560, category: "UR", course: "MBBS" })
+
+  const fingerprint = valid
+    ? queryFingerprint({
+        mode: byScore ? "score" : "rank",
+        value: byScore ? parsedMarks : parsedRank,
+        category,
+        course,
+      })
+    : null
+
+  const submittedFingerprint = submitted
+    ? queryFingerprint({
+        mode: submitted.byScore ? "score" : "rank",
+        value: submitted.value,
+        category: submitted.category,
+        course: submitted.course,
+      })
+    : null
+
+  const stale = fingerprint !== null && fingerprint !== submittedFingerprint
+
+  // Region filters the already-fetched list, so it never triggers a new search.
   const states = region === "All" ? undefined : STATES_BY_REGION[region]
 
   const result = useMemo(() => {
-    if (!valid) return null
+    if (!submitted) return null
     const options = { limit: 40, states }
-    if (byScore) return marksToColleges(parsedMarks, category, course, options)
-    // Rank mode skips the score curve: the rank is already known.
-    return { ...rankToColleges(parsedRank, category, course, options), rank: null }
-  }, [valid, byScore, parsedMarks, parsedRank, category, course, states])
+    if (submitted.byScore) {
+      return marksToColleges(submitted.value, submitted.category, submitted.course, options)
+    }
+    return {
+      ...rankToColleges(submitted.value, submitted.category, submitted.course, options),
+      rank: null,
+    }
+  }, [submitted, states])
+
+  function runSearch() {
+    if (!valid) return
+    setSubmitted({
+      byScore,
+      value: byScore ? parsedMarks : parsedRank,
+      category,
+      course,
+    })
+  }
 
   // The site groups results into Safe, Moderate and Reach rather than one list.
   const grouped = useMemo(() => {
@@ -99,6 +147,12 @@ export default function PredictorScreen() {
           collapseAfter={5}
         />
         <Segmented label="Course" options={COURSES} value={course} onChange={setCourse} />
+        {/* Always enabled: re-running an identical query reuses the same
+            fingerprint, so it is free. Only invalid input blocks it. */}
+        <Button label="Find my colleges" onPress={runSearch} disabled={!valid} />
+      </Surface>
+
+      {result ? (
         <Segmented
           label="Region"
           options={["All", ...REGIONS] as ("All" | Region)[]}
@@ -106,7 +160,15 @@ export default function PredictorScreen() {
           onChange={setRegion}
           collapseAfter={4}
         />
-      </Surface>
+      ) : null}
+
+      {stale && submitted ? (
+        <Surface variant="outline">
+          <Text variant="caption" tone="moderate">
+            You have changed the inputs. Tap Find my colleges to update the results below.
+          </Text>
+        </Surface>
+      ) : null}
 
       {result ? (
         <>
