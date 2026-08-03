@@ -76,18 +76,26 @@ async function accessToken() {
   return json.access_token
 }
 
+/**
+ * Only these are settable.
+ *
+ * The admin API exposes resetPasswordTemplate, verifyEmailTemplate,
+ * changeEmailTemplate and revertSecondFactorAdditionTemplate, and nothing for
+ * the email-link sign-in message — signInTemplate, emailSignInTemplate and
+ * signInWithEmailLinkTemplate are all rejected as unknown fields. So magic-link
+ * emails keep Firebase's default wording unless the console offers that
+ * template, which is the only place it could be changed.
+ *
+ * changeEmailTemplate is left alone: nothing in the app changes an email
+ * address, so there is no design for it and overwriting the default would be
+ * churn.
+ */
 const TEMPLATES = [
   {
     field: "resetPasswordTemplate",
     file: "emails/firebase-paste/password-reset.html",
     subject: "Reset your NEET Companion password",
     label: "Password reset",
-  },
-  {
-    field: "signInWithEmailTemplate",
-    file: "emails/firebase-paste/sign-in-link.html",
-    subject: "Your NEET Companion sign-in link",
-    label: "Email sign-in link",
   },
   {
     field: "verifyEmailTemplate",
@@ -123,8 +131,23 @@ const res = await fetch(`${BASE}?updateMask=notification.sendEmail`, {
 const out = await res.json()
 
 if (!res.ok) {
+  const msg = String(out.error?.message ?? "")
   console.error("Failed:", JSON.stringify(out.error ?? out, null, 2))
-  if (String(out.error?.message ?? "").includes("PERMISSION_DENIED")) {
+
+  if (msg.includes("EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED")) {
+    console.error(
+      "\nGoogle blocks template subject and body writes over this API. It is not a\n" +
+        "permissions problem: senderDisplayName on the same object is accepted, only\n" +
+        "the content fields are refused. Email template content can only be changed\n" +
+        "in the console.\n\n" +
+        "  https://console.firebase.google.com/project/" + sa.project_id + "/authentication/emails\n\n" +
+        "Paste emails/firebase-paste/password-reset.html over the Password reset body,\n" +
+        "and verify-email.html over the Email address verification body.\n\n" +
+        "For full control — including the magic-link email, which has no console\n" +
+        "template at all — generate the links with the Admin SDK and send them through\n" +
+        "Resend instead of letting Firebase compose them.\n",
+    )
+  } else if (msg.includes("PERMISSION_DENIED")) {
     console.error(
       "\nThe service account needs the Firebase Authentication Admin role.\n" +
         "Google Cloud console -> IAM -> find this account -> add that role.",
