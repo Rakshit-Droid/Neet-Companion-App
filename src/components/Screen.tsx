@@ -8,6 +8,7 @@ import * as Haptics from "expo-haptics"
 import { layout, radius, space, useTheme } from "@/theme"
 import { Text } from "./Text"
 import { AccountButton } from "./AccountButton"
+import { HeaderActions } from "./CreditChip"
 
 interface ScreenProps {
   title: string
@@ -81,7 +82,9 @@ export function Screen({ title, eyebrow, back = false, children }: ScreenProps) 
             ) : null}
             <Text variant="h1">{title}</Text>
           </View>
-          <AccountButton />
+          <HeaderActions>
+            <AccountButton />
+          </HeaderActions>
         </View>
         {children}
       </View>

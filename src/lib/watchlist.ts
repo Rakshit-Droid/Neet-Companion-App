@@ -23,6 +23,13 @@ export interface WatchSnapshot {
   year: number
   category: Category
   course: Course
+  /**
+   * Which quota the snapshot came from. Needed to look up the round history for
+   * this exact seat — the same college and course under a different quota is a
+   * different cutoff entirely. Optional because entries saved before this field
+   * existed have no value for it.
+   */
+  quota?: string
   closing: number
   seats: number
 }
@@ -83,6 +90,7 @@ export function snapshotOf(
     year: head.year,
     category: head.category,
     course: head.course,
+    quota: head.quota,
     closing: head.closing,
     seats: detail.seatsFor(head.category, head.course),
   }

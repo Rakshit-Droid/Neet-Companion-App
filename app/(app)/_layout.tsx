@@ -2,6 +2,7 @@ import { View } from "react-native"
 import { Slot } from "expo-router"
 
 import { BottomNav, SideNav, useIsWide } from "@/components/AppNav"
+import { ReferralPrompt } from "@/components/ReferralPrompt"
 import { useTheme } from "@/theme"
 
 /**
@@ -20,6 +21,7 @@ export default function AppLayout() {
         <View style={{ flex: 1 }}>
           <Slot />
         </View>
+        <ReferralPrompt />
       </View>
     )
   }
@@ -30,6 +32,7 @@ export default function AppLayout() {
         <Slot />
       </View>
       <BottomNav />
+      <ReferralPrompt />
     </View>
   )
 }

@@ -8,7 +8,9 @@ import { Text } from "@/components/Text"
 import { Field } from "@/components/Field"
 import { Button } from "@/components/Button"
 import { space } from "@/theme"
-import { authErrorMessage, isFirebaseConfigured, signUp } from "@/lib/auth"
+import { authErrorMessage, isAuthAvailable, signUp } from "@/lib/auth"
+import { recordReferral } from "@/lib/referrals"
+import { SIGNUP_GRANT } from "@/lib/credits"
 import { NotConfiguredNotice } from "./sign-in"
 
 const MIN_PASSWORD = 6
@@ -17,6 +19,8 @@ export default function SignUpScreen() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [referral, setReferral] = useState("")
+  const [referralNote, setReferralNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,8 +33,17 @@ export default function SignUpScreen() {
     setBusy(true)
     setError(null)
     try {
-      await signUp(email, password, name)
-      router.replace("/account")
+      const user = await signUp(email, password, name)
+
+      // A bad code must not cost someone their account: the signup has already
+      // succeeded by this point, so attribution failing is reported, not thrown.
+      if (referral.trim()) {
+        const attempt = await recordReferral(user.uid, referral)
+        if (attempt.status === "unknownCode") {
+          setReferralNote("That referral code was not recognised, so it was not applied.")
+        }
+      }
+      router.replace("/")
     } catch (err) {
       setError(authErrorMessage(err))
     } finally {
@@ -40,7 +53,7 @@ export default function SignUpScreen() {
 
   return (
     <Screen title="Create account" back>
-      {!isFirebaseConfigured ? <NotConfiguredNotice /> : null}
+      {!isAuthAvailable ? <NotConfiguredNotice /> : null}
 
       <Surface style={{ gap: space.lg }}>
         <Field
@@ -76,13 +89,25 @@ export default function SignUpScreen() {
           hint={passwordTooShort ? undefined : "Use something you do not reuse elsewhere."}
           error={error ?? (passwordTooShort ? `At least ${MIN_PASSWORD} characters.` : undefined)}
         />
+        <Field
+          label="Referral code (optional)"
+          value={referral}
+          onChangeText={(v) => {
+            setReferral(v)
+            setReferralNote(null)
+          }}
+          placeholder="From a friend"
+          autoCapitalize="characters"
+          editable={!busy}
+          hint={referralNote ?? "Your friend earns credits when you buy your first pack."}
+        />
         <Button label="Create account" onPress={submit} disabled={!canSubmit} loading={busy} />
       </Surface>
 
       <Surface variant="outline">
         <Text variant="caption" tone="muted">
-          Creating an account is optional. Browsing colleges, states and cutoffs works without
-          one. By continuing you agree to our terms and privacy policy.
+          You start with {SIGNUP_GRANT} free credits, enough for your first few choice lists. By
+          continuing you agree to our terms and privacy policy.
         </Text>
       </Surface>
 

@@ -1,5 +1,5 @@
-import { useMemo } from "react"
-import { Pressable, View } from "react-native"
+import { useCallback, useEffect, useState } from "react"
+import { View } from "react-native"
 import { router } from "expo-router"
 
 import { Screen } from "@/components/Screen"
@@ -10,9 +10,14 @@ import { Segmented } from "@/components/Segmented"
 import { Button } from "@/components/Button"
 import { TierBadge } from "@/components/TierBadge"
 import { WatchButton } from "@/components/WatchButton"
+import { RoundLadder } from "@/components/RoundLadder"
 import { radius, space, useTheme } from "@/theme"
 import { useSession } from "@/state/session"
+import { useCredits } from "@/state/credits"
 import { useProfile } from "@/state/profile"
+import { PRIORITIES, type Priority } from "@/lib/profile"
+import { PRICE } from "@/lib/credits"
+import { markBilled, wasRecentlyBilled } from "@/lib/metering"
 import {
   CATEGORIES,
   CATEGORY_LABEL,
@@ -21,12 +26,10 @@ import {
   REGIONS,
   STATES_BY_REGION,
   formatIndian,
+  queryFingerprint,
   type Region,
 } from "@/lib/predictors"
-import { buildChoiceList } from "@/lib/choice-filling"
-
-const PRIORITIES = ["Balanced", "Top colleges", "Near home", "Government"] as const
-type Priority = (typeof PRIORITIES)[number]
+import { buildRoundPlan, type RoundPlanList } from "@/lib/rounds"
 
 const WEIGHTS: Record<Priority, { prestige: number; state: number; government: number }> = {
   Balanced: { prestige: 1, state: 0.6, government: 0.8 },
@@ -37,28 +40,79 @@ const WEIGHTS: Record<Priority, { prestige: number; state: number; government: n
 
 export default function AllIndiaQuotaScreen() {
   const t = useTheme()
-  const { signedIn } = useSession()
+  const { signedIn, user } = useSession()
+  const { balance, charge } = useCredits()
   const { profile, update } = useProfile()
 
-  // Priority and region live on the profile too, so the list is reproducible
-  // without retyping anything on every visit.
-  const priority: Priority = "Balanced"
   const region: "All" | Region = profile.homeState
     ? ((REGIONS.find((r) => STATES_BY_REGION[r].includes(profile.homeState!)) ??
         "All") as Region)
     : "All"
 
-  const list = useMemo(() => {
-    if (!profile.rank) return null
-    return buildChoiceList({
-      rank: profile.rank,
-      category: profile.category,
-      course: profile.course,
-      preferredStates: region === "All" ? [] : STATES_BY_REGION[region],
-      weights: WEIGHTS[priority],
-      limit: 40,
-    })
-  }, [profile.rank, profile.category, profile.course, region, priority])
+  const [list, setList] = useState<RoundPlanList | null>(null)
+  /** Which inputs the visible list was built from, so staleness is detectable. */
+  const [builtFor, setBuiltFor] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [shortfall, setShortfall] = useState(false)
+
+  // Region and priority change the result, so they belong in the billing
+  // identity alongside rank, category and course.
+  const fingerprint = profile.rank
+    ? [
+        queryFingerprint({
+          mode: "rank",
+          value: profile.rank,
+          category: profile.category,
+          course: profile.course,
+        }),
+        region,
+        profile.priority,
+      ].join("|")
+    : null
+
+  const stale = Boolean(list && builtFor && fingerprint && builtFor !== fingerprint)
+
+  // A shortfall notice is about one attempt, not a permanent state.
+  useEffect(() => {
+    setShortfall(false)
+  }, [fingerprint])
+
+  const build = useCallback(async () => {
+    if (!profile.rank || !fingerprint || !user) return
+    setBusy(true)
+    setShortfall(false)
+    try {
+      // Charge before building only if this exact query has not already been
+      // paid for today: going back to a previous combination is free.
+      const alreadyPaid = await wasRecentlyBilled(user.uid, fingerprint)
+      if (!alreadyPaid) {
+        const ok = await charge(PRICE.search, "search", `search:${user.uid}:${fingerprint}`, {
+          rank: profile.rank,
+          category: profile.category,
+          course: profile.course,
+        })
+        if (!ok) {
+          setShortfall(true)
+          return
+        }
+        await markBilled(user.uid, fingerprint)
+      }
+
+      setList(
+        buildRoundPlan({
+          rank: profile.rank,
+          category: profile.category,
+          course: profile.course,
+          preferredStates: region === "All" ? [] : STATES_BY_REGION[region],
+          weights: WEIGHTS[profile.priority],
+          limit: 40,
+        }),
+      )
+      setBuiltFor(fingerprint)
+    } finally {
+      setBusy(false)
+    }
+  }, [profile, fingerprint, region, user, charge])
 
   if (!signedIn) {
     return (
@@ -100,13 +154,45 @@ export default function AllIndiaQuotaScreen() {
           value={profile.course}
           onChange={(c) => update({ course: c })}
         />
+        <Segmented
+          label="What matters most"
+          options={PRIORITIES as readonly Priority[] as Priority[]}
+          value={profile.priority}
+          onChange={(p) => update({ priority: p })}
+          collapseAfter={4}
+        />
       </Surface>
+
+      <BuildBar
+        disabled={!profile.rank}
+        busy={busy}
+        stale={stale}
+        hasList={Boolean(list)}
+        balance={balance}
+        onPress={build}
+      />
+
+      {shortfall ? (
+        <Surface style={{ backgroundColor: t.reachBg, gap: space.sm }}>
+          <Text variant="body" tone="reach">
+            Not enough credits
+          </Text>
+          <Text variant="bodySm" tone="reach">
+            Building a list costs {PRICE.search} credits and you have {balance}.
+          </Text>
+          <Button label="Get credits" onPress={() => router.push("/credits")} />
+        </Surface>
+      ) : null}
 
       {!list ? (
         <Surface style={{ gap: space.sm }}>
-          <Text variant="h2">Add your rank</Text>
+          <Text variant="h2">
+            {profile.rank ? "Ready when you are" : "Add your rank"}
+          </Text>
           <Text variant="bodyRegular" tone="secondary">
-            Enter your All India Rank above and your counselling list appears here.
+            {profile.rank
+              ? `Your list is built on demand so you are only charged when you ask for it.`
+              : "Enter your All India Rank above, then build your counselling list."}
           </Text>
         </Surface>
       ) : (
@@ -117,7 +203,7 @@ export default function AllIndiaQuotaScreen() {
             <Tally label="Safe" count={list.counts.Safe} tone="safe" bg={t.safeBg} />
           </View>
 
-          {list.guidance.warning === "NO_ANCHOR" && list.choices.length > 0 ? (
+          {list.guidance.warning === "NO_ANCHOR" && list.plans.length > 0 ? (
             <Surface style={{ backgroundColor: t.reachBg, gap: space.xs }}>
               <Text variant="body" tone="reach">
                 No anchor in this list
@@ -142,7 +228,7 @@ export default function AllIndiaQuotaScreen() {
                 {list.total} reachable {list.total === 1 ? "seat" : "seats"}, preference order
               </Text>
 
-              {list.choices.map((choice) => (
+              {list.plans.map(({ choice, rounds, likelyFromRound }) => (
                 <Surface
                   key={`${choice.order}-${choice.college.slug}`}
                   borderRadius={radius.sm}
@@ -176,44 +262,22 @@ export default function AllIndiaQuotaScreen() {
                         {choice.college.state}, {choice.college.type}
                       </Text>
 
-                      {choice.rounds.length ? (
-                        <View
-                          style={{
-                            marginTop: space.xs,
-                            paddingTop: space.sm,
-                            borderTopWidth: 1,
-                            borderTopColor: t.border,
-                            gap: 2,
-                          }}
-                        >
-                          <Text variant="label" tone="muted">
-                            {LATEST_CUTOFF_YEAR} rounds
-                          </Text>
-                          {choice.rounds.map((r) => (
-                            <View
-                              key={r.round}
-                              style={{
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                gap: space.sm,
-                              }}
-                            >
-                              <Text
-                                variant="caption"
-                                tone={r.round === choice.clearsFromRound ? "accent" : "muted"}
-                                style={{ flex: 1 }}
-                              >
-                                {r.round}
-                                {r.round === choice.clearsFromRound ? " — reaches you" : ""}
-                              </Text>
-                              <Text variant="caption" tone="muted">
-                                {formatIndian(r.closing)}
-                                {r.seats ? `, ${r.seats} seat${r.seats === 1 ? "" : "s"}` : ""}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      ) : null}
+                      <View
+                        style={{
+                          marginTop: space.xs,
+                          paddingTop: space.sm,
+                          borderTopWidth: 1,
+                          borderTopColor: t.border,
+                          gap: space.xs,
+                        }}
+                      >
+                        <Text variant="label" tone="muted">
+                          {likelyFromRound
+                            ? `In reach from ${likelyFromRound}`
+                            : "Round by round"}
+                        </Text>
+                        <RoundLadder rounds={rounds} />
+                      </View>
                     </View>
                   </View>
 
@@ -227,9 +291,9 @@ export default function AllIndiaQuotaScreen() {
                 </Surface>
               ))}
 
-              {list.total > list.choices.length ? (
+              {list.total > list.plans.length ? (
                 <Text variant="caption" tone="muted">
-                  Showing {list.choices.length} of {list.total} reachable seats.
+                  Showing {list.plans.length} of {list.total} reachable seats.
                 </Text>
               ) : null}
             </View>
@@ -246,6 +310,42 @@ export default function AllIndiaQuotaScreen() {
         </Text>
       </Surface>
     </Screen>
+  )
+}
+
+/**
+ * Building is an explicit action rather than a live recompute. The list used to
+ * rebuild on every keystroke, which at 2 credits a search would have billed a
+ * fortune for typing a five-digit rank.
+ */
+function BuildBar({
+  disabled,
+  busy,
+  stale,
+  hasList,
+  balance,
+  onPress,
+}: {
+  disabled: boolean
+  busy: boolean
+  stale: boolean
+  hasList: boolean
+  balance: number
+  onPress: () => void
+}) {
+  const label = !hasList
+    ? `Build my list — ${PRICE.search} credits`
+    : stale
+      ? `Rebuild with these changes — ${PRICE.search} credits`
+      : `Rebuild — ${PRICE.search} credits`
+
+  return (
+    <View style={{ gap: space.xs }}>
+      <Button label={label} onPress={onPress} disabled={disabled || busy} loading={busy} />
+      <Text variant="caption" tone="muted" style={{ textAlign: "center" }}>
+        {balance} credits left. Repeating the same search within a day is free.
+      </Text>
+    </View>
   )
 }
 

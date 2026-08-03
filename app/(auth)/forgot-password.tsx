@@ -6,7 +6,7 @@ import { Text } from "@/components/Text"
 import { Field } from "@/components/Field"
 import { Button } from "@/components/Button"
 import { space } from "@/theme"
-import { authErrorMessage, isFirebaseConfigured, sendReset } from "@/lib/auth"
+import { authErrorMessage, isAuthAvailable, sendReset } from "@/lib/auth"
 import { NotConfiguredNotice } from "./sign-in"
 
 export default function ForgotPasswordScreen() {
@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <Screen title="Reset password" back>
-      {!isFirebaseConfigured ? <NotConfiguredNotice /> : null}
+      {!isAuthAvailable ? <NotConfiguredNotice /> : null}
 
       {sent ? (
         <Surface style={{ gap: space.sm }}>

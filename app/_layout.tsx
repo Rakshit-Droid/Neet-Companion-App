@@ -13,6 +13,7 @@ import {
 import { ThemeProvider, useTheme } from "@/theme"
 import { SessionProvider } from "@/state/session"
 import { ProfileProvider } from "@/state/profile"
+import { CreditsProvider } from "@/state/credits"
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -35,7 +36,9 @@ export default function RootLayout() {
     <ThemeProvider>
       <SessionProvider>
         <ProfileProvider>
-          <ThemedStack />
+          <CreditsProvider>
+            <ThemedStack />
+          </CreditsProvider>
         </ProfileProvider>
       </SessionProvider>
     </ThemeProvider>

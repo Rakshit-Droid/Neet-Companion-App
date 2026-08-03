@@ -10,6 +10,8 @@ import { Button } from "@/components/Button"
 import { radius, space, useTheme } from "@/theme"
 import { useSession } from "@/state/session"
 import { useProfile } from "@/state/profile"
+import { useCredits } from "@/state/credits"
+import { PRICE } from "@/lib/credits"
 import { listWatches, type WatchStatus } from "@/lib/watchlist"
 import {
   CATEGORY_LABEL,
@@ -22,6 +24,7 @@ export default function DashboardScreen() {
   const t = useTheme()
   const { signedIn, user } = useSession()
   const { profile, loading } = useProfile()
+  const { balance } = useCredits()
   const [watches, setWatches] = useState<WatchStatus[]>([])
 
   useFocusEffect(
@@ -148,6 +151,21 @@ export default function DashboardScreen() {
         cta="See progress"
         onPress={() => router.push("/state-quota")}
       />
+
+      {signedIn ? (
+        <Card
+          icon="zap"
+          title="Credits"
+          body={
+            balance >= PRICE.search
+              ? `${balance} left. A choice list costs ${PRICE.search}.`
+              : `${balance} left, not enough to build a list.`
+          }
+          cta="Open credits"
+          onPress={() => router.push("/credits")}
+          highlight={balance < PRICE.search}
+        />
+      ) : null}
 
       <Surface variant="outline">
         <Text variant="caption" tone="muted">

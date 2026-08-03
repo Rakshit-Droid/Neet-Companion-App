@@ -10,12 +10,17 @@ const KEY = "profile-v1"
  * Before this, rank and category were local state on each screen, so the same
  * three facts were retyped on every visit and nothing survived a restart.
  */
+/** What the candidate optimises for. Drives the choice-ordering weights. */
+export const PRIORITIES = ["Balanced", "Top colleges", "Near home", "Government"] as const
+export type Priority = (typeof PRIORITIES)[number]
+
 export interface Profile {
   rank: number | null
   category: Category
   course: Course
   /** State code, used to weight choice ordering toward home. */
   homeState: string | null
+  priority: Priority
 }
 
 export const EMPTY_PROFILE: Profile = {
@@ -23,6 +28,7 @@ export const EMPTY_PROFILE: Profile = {
   category: "UR",
   course: "MBBS",
   homeState: null,
+  priority: "Balanced",
 }
 
 function sanitise(raw: unknown): Profile {
@@ -41,6 +47,9 @@ function sanitise(raw: unknown): Profile {
       ? (p.course as Course)
       : EMPTY_PROFILE.course,
     homeState: typeof p.homeState === "string" && p.homeState ? p.homeState : null,
+    priority: PRIORITIES.includes(p.priority as Priority)
+      ? (p.priority as Priority)
+      : EMPTY_PROFILE.priority,
   }
 }
 

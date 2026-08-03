@@ -7,14 +7,14 @@ import {
   type ReactNode,
 } from "react"
 
-import { watchAuth, isFirebaseConfigured, type AuthUser } from "@/lib/auth"
+import { watchAuth, isAuthAvailable, type AuthUser } from "@/lib/auth"
 
 interface SessionValue {
   user: AuthUser | null
   /** True until the persisted session has been restored. */
   loading: boolean
   signedIn: boolean
-  /** False when no Firebase project is wired up yet. */
+  /** False when neither Firebase nor the dev mock can sign anyone in. */
   available: boolean
 }
 
@@ -26,10 +26,10 @@ const SessionContext = createContext<SessionValue | null>(null)
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [loading, setLoading] = useState(isFirebaseConfigured)
+  const [loading, setLoading] = useState(isAuthAvailable)
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isAuthAvailable) {
       setLoading(false)
       return
     }
@@ -45,7 +45,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       signedIn: Boolean(user),
-      available: isFirebaseConfigured,
+      available: isAuthAvailable,
     }),
     [user, loading],
   )

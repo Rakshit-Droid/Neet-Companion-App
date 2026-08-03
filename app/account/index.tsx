@@ -10,11 +10,14 @@ import { Button } from "@/components/Button"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { radius, space, useTheme } from "@/theme"
 import { useSession } from "@/state/session"
+import { useCredits } from "@/state/credits"
+import { REFERRAL_REWARD } from "@/lib/credits"
 import { signOut } from "@/lib/auth"
 
 export default function AccountScreen() {
   const t = useTheme()
   const { user, signedIn, loading, available } = useSession()
+  const { balance } = useCredits()
   const [busy, setBusy] = useState(false)
 
   async function handleSignOut() {
@@ -94,31 +97,25 @@ export default function AccountScreen() {
         <Text variant="label" tone="muted">
           Saved
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open watchlist"
+        <NavRow
+          label="Watchlist"
+          hint="Colleges you are tracking"
           onPress={() => router.push("/watchlist")}
-        >
-          {({ pressed }) => (
-            <Surface
-              borderRadius={radius.sm}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                opacity: pressed ? 0.7 : 1,
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text variant="bodySm">Watchlist</Text>
-                <Text variant="caption" tone="muted">
-                  Colleges you are tracking
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={18} color={t.textMuted} />
-            </Surface>
-          )}
-        </Pressable>
+        />
+        {signedIn ? (
+          <>
+            <NavRow
+              label="Credits"
+              hint={`${balance} available`}
+              onPress={() => router.push("/credits")}
+            />
+            <NavRow
+              label="Refer a friend"
+              hint={`Earn ${REFERRAL_REWARD} credits when they buy a pack`}
+              onPress={() => router.push("/referrals")}
+            />
+          </>
+        ) : null}
       </View>
 
       <View style={{ gap: space.sm }}>
@@ -154,6 +151,41 @@ export default function AccountScreen() {
         </Surface>
       </View>
     </Screen>
+  )
+}
+
+function NavRow({
+  label,
+  hint,
+  onPress,
+}: {
+  label: string
+  hint: string
+  onPress: () => void
+}) {
+  const t = useTheme()
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
+      {({ pressed }) => (
+        <Surface
+          borderRadius={radius.sm}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            opacity: pressed ? 0.7 : 1,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text variant="bodySm">{label}</Text>
+            <Text variant="caption" tone="muted">
+              {hint}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={t.textMuted} />
+        </Surface>
+      )}
+    </Pressable>
   )
 }
 

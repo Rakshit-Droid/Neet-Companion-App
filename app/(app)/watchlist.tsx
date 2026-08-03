@@ -9,9 +9,13 @@ import { Text } from "@/components/Text"
 import { radius, space, useTheme } from "@/theme"
 import { CATEGORY_LABEL, LATEST_CUTOFF_YEAR, formatIndian } from "@/lib/predictors"
 import { listWatches, removeWatch, type WatchStatus } from "@/lib/watchlist"
+import { RoundLadder } from "@/components/RoundLadder"
+import { roundEvidence } from "@/lib/rounds"
+import { useProfile } from "@/state/profile"
 
 export default function WatchlistScreen() {
   const t = useTheme()
+  const { profile } = useProfile()
   const [items, setItems] = useState<WatchStatus[] | null>(null)
 
   const load = useCallback(() => {
@@ -113,6 +117,33 @@ export default function WatchlistScreen() {
                       </Text>
                     )}
                   </View>
+                </View>
+              ) : null}
+
+              {/* The point of watching: how this seat behaves as counselling
+                  moves through its rounds, judged against your saved rank. */}
+              {profile.rank && item.current?.quota ? (
+                <View
+                  style={{
+                    marginTop: space.xs,
+                    paddingTop: space.sm,
+                    borderTopWidth: 1,
+                    borderTopColor: t.border,
+                    gap: space.xs,
+                  }}
+                >
+                  <Text variant="label" tone="muted">
+                    Rounds at AIR {formatIndian(profile.rank)}
+                  </Text>
+                  <RoundLadder
+                    rounds={roundEvidence(
+                      item.college.slug,
+                      item.current.category,
+                      item.current.course,
+                      item.current.quota,
+                      profile.rank,
+                    )}
+                  />
                 </View>
               ) : null}
 

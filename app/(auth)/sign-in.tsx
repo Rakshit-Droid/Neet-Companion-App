@@ -8,7 +8,14 @@ import { Text } from "@/components/Text"
 import { Field } from "@/components/Field"
 import { Button } from "@/components/Button"
 import { space } from "@/theme"
-import { authErrorMessage, isFirebaseConfigured, signIn } from "@/lib/auth"
+import {
+  authErrorMessage,
+  isAuthAvailable,
+  isMockAuthEnabled,
+  MOCK_EMAIL,
+  MOCK_PASSWORD,
+  signIn,
+} from "@/lib/auth"
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("")
@@ -24,7 +31,9 @@ export default function SignInScreen() {
     setError(null)
     try {
       await signIn(email, password)
-      router.replace("/account")
+      // Back to the app, not the account screen: signing in is nearly always a
+      // step towards a gated tool rather than the destination.
+      router.replace("/")
     } catch (err) {
       setError(authErrorMessage(err))
     } finally {
@@ -34,7 +43,17 @@ export default function SignInScreen() {
 
   return (
     <Screen title="Sign in" back>
-      {!isFirebaseConfigured ? <NotConfiguredNotice /> : null}
+      {isMockAuthEnabled ? (
+        <DevCredentialsNotice
+          onFill={() => {
+            setEmail(MOCK_EMAIL)
+            setPassword(MOCK_PASSWORD)
+            setError(null)
+          }}
+        />
+      ) : !isAuthAvailable ? (
+        <NotConfiguredNotice />
+      ) : null}
 
       <Surface style={{ gap: space.lg }}>
         <Field
@@ -77,6 +96,27 @@ export default function SignInScreen() {
         </Pressable>
       </View>
     </Screen>
+  )
+}
+
+/**
+ * Only ever rendered while the dev mock is active, which cannot happen in a
+ * release build. Printing the password is the point: it is a throwaway local
+ * account, not a credential.
+ */
+function DevCredentialsNotice({ onFill }: { onFill: () => void }) {
+  return (
+    <Surface variant="outline" style={{ gap: space.sm }}>
+      <Text variant="label" tone="moderate">
+        Development sign-in
+      </Text>
+      <Text variant="caption" tone="muted">
+        Firebase is not wired up yet, so accounts are stored on this device only.
+        Use {MOCK_EMAIL} with the password {MOCK_PASSWORD}, or create any account
+        you like — it works the same way.
+      </Text>
+      <Button label="Fill test credentials" variant="secondary" onPress={onFill} />
+    </Surface>
   )
 }
 
