@@ -291,3 +291,56 @@ test("every verdict has a label", () => {
   }
   assert.ok(seen.size >= 4, "the ladder is not being exercised")
 })
+
+// -- regression ---------------------------------------------------------------
+
+/**
+ * The verdict ladder was shipped with `worst` and `best` swapped. Because
+ * worst <= median <= best, the "clear" branch tested the loosest bound first and
+ * swallowed every rank that would have cleared in even one favourable year, so
+ * "likely" and "contested" were effectively unreachable and everything reported
+ * Clear.
+ *
+ * Monotonicity could not catch it — the inverted ladder is monotonic too. This
+ * pins the direction instead: clearing the TIGHTEST year on record is what makes
+ * a seat clear, and clearing only the loosest one must not.
+ *
+ * Only the first round that has data is probed. Verdicts deliberately carry
+ * forward so they never weaken later in the schedule, so any later round may be
+ * reporting a verdict earned earlier rather than its own numbers.
+ */
+test("a verdict is anchored to the tightest year, not the loosest", () => {
+  const probes = SEATS.flatMap((seat) => {
+    const rounds = roundEvidence(seat.slug, seat.category, seat.course, seat.quota, 1)
+    const first = rounds.find((r) => r.spread !== null)
+    // A round whose years all closed at the same rank proves nothing here.
+    if (!first || first.spread!.worst >= first.spread!.best) return []
+    return [{ seat, spread: first.spread!, round: first.round }]
+  }).slice(0, 400)
+
+  assert.ok(probes.length > 0, "no seat in the bundle has a varying first round")
+
+  for (const { seat, spread, round } of probes) {
+    const at = (rank: number) =>
+      roundEvidence(seat.slug, seat.category, seat.course, seat.quota, rank).find(
+        (r) => r.round === round,
+      )!.verdict
+
+    // Good enough for the hardest year on record: nothing stronger than clear exists.
+    assert.equal(
+      at(spread.worst),
+      "clear",
+      `${seat.slug} ${round}: clearing the tightest year (${spread.worst}) must be clear`,
+    )
+
+    // Only good enough for the single loosest year: that is not a safe seat.
+    assert.notEqual(
+      at(spread.best),
+      "clear",
+      `${seat.slug} ${round}: clearing only the loosest year (${spread.best}) must not be clear`,
+    )
+
+    // Beyond every observed closing rank there is no evidence of admission.
+    assert.equal(at(spread.best + 1), "unlikely")
+  }
+})

@@ -174,9 +174,9 @@ function statsFor(key: string): RoundStats[] {
 }
 
 function rawVerdict(spread: RoundSpread, rank: number): RoundVerdict {
-  if (rank <= spread.best) return "clear"
+  if (rank <= spread.worst) return "clear"
   if (rank <= spread.median) return "likely"
-  if (rank <= spread.worst) return "contested"
+  if (rank <= spread.best) return "contested"
   return "unlikely"
 }
 
