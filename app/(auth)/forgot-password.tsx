@@ -16,7 +16,7 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState<string | null>(null)
 
   async function submit() {
-    if (!email.trim() || busy) return
+    if (!isAuthAvailable || !email.trim() || busy) return
     setBusy(true)
     setError(null)
     try {

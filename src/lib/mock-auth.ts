@@ -8,17 +8,30 @@ import type { AuthUser } from "./auth-types"
  * before the Firebase project exists.
  *
  * SECURITY: this is a backdoor. It accepts a hardcoded password and keeps
- * credentials in plaintext, so it must never run in a shipped build. Two
- * independent guards prevent that:
+ * credentials in plaintext. It runs only when BOTH of these hold:
  *
- *   __DEV__               false in every release build (expo export, EAS)
- *   !isFirebaseConfigured false the moment real config lands in app.json
+ *   1. the build is a dev build, or EXPO_PUBLIC_ALLOW_DEV_AUTH is explicitly
+ *      set to "1" at build time
+ *   2. Firebase is not configured
  *
- * Either alone disables it. The second flips as soon as the Firebase config is
- * pasted in, so this dies on its own rather than waiting for someone to
- * remember to delete it.
+ * Condition 2 is the one that matters most: the moment real Firebase config
+ * lands in app.json this dies regardless of any flag, so it cannot outlive its
+ * purpose or be left on by accident.
+ *
+ * The env flag exists so a staging deploy can be signed into before Firebase is
+ * ready. It defaults to off, and turning it on means publishing a known
+ * password on whatever URL that build is served from. Never set it on a
+ * deployment that has real users.
+ *
+ * Note on what "disabled" means: the strings and functions below still ship in
+ * the bundle when this is off — Metro does not eliminate them across module
+ * boundaries — but nothing can reach them, because signIn() and friends in
+ * auth.ts branch on isMockAuthEnabled first. The password is documented in the
+ * README anyway; it is a throwaway local account, not a secret.
  */
-export const isMockAuthEnabled = __DEV__ && !isFirebaseConfigured
+const allowInDeployedBuild = process.env.EXPO_PUBLIC_ALLOW_DEV_AUTH === "1"
+
+export const isMockAuthEnabled = (__DEV__ || allowInDeployedBuild) && !isFirebaseConfigured
 
 /** Seeded account, shown on the sign-in screen while the mock is active. */
 export const MOCK_EMAIL = "dev@neetcompanion.test"

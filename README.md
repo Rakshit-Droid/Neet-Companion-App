@@ -81,17 +81,30 @@ npm test             # engine, ledger and referral tests
 npm run typecheck    # strict TypeScript
 ```
 
-### Signing in during development
+### Signing in before Firebase
 
-Firebase is not wired up yet. Until it is, a local stand-in accepts:
+Firebase is not wired up yet. Until it is, a stand-in accepts:
 
 ```
 dev@neetcompanion.test / devpass123
 ```
 
-Accounts you create yourself work too, and everything persists on the device. The
-stand-in is gated on `__DEV__ && !isFirebaseConfigured`, so a release build cannot
-reach it and pasting real Firebase config disables it independently.
+Accounts you create yourself work too, and everything persists on the device.
+
+These work on the Vercel deployment as well, because `vercel.json` sets
+`EXPO_PUBLIC_ALLOW_DEV_AUTH=1` at build time.
+
+> **That publishes a known password on a public URL.** It is deliberate while the
+> app has no real users and Firebase is unconfigured. Remove
+> `EXPO_PUBLIC_ALLOW_DEV_AUTH=1` from the `buildCommand` in `vercel.json` before
+> anyone real signs up.
+
+The stand-in needs both halves of `(__DEV__ || EXPO_PUBLIC_ALLOW_DEV_AUTH === "1")
+&& !isFirebaseConfigured`. The second half is the one that matters: adding real
+Firebase config disables it regardless of the flag, so it cannot outlive its
+purpose. Note that the credentials still ship as strings in the bundle when
+disabled — Metro does not eliminate them — but nothing can reach them, since
+`signIn()` branches on the gate first.
 
 See [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) for wiring up the real thing.
 

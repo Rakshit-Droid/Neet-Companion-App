@@ -23,7 +23,10 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !busy
+  // No point letting them submit into a provider that cannot sign anyone in:
+  // the button would just return a red error every time.
+  const canSubmit =
+    isAuthAvailable && email.trim().length > 0 && password.length > 0 && !busy
 
   async function submit() {
     if (!canSubmit) return
@@ -122,10 +125,14 @@ function DevCredentialsNotice({ onFill }: { onFill: () => void }) {
 
 export function NotConfiguredNotice() {
   return (
-    <Surface variant="outline">
+    <Surface variant="outline" style={{ gap: space.xs }}>
       <Text variant="caption" tone="moderate">
-        Accounts are not switched on yet. The screens work, but sign-in needs the Firebase
-        project to be created and its config added to app.json.
+        Accounts are not switched on in this build. Sign-in needs the Firebase project to be
+        created and its six config values added to app.json.
+      </Text>
+      <Text variant="caption" tone="muted">
+        Everything else works. Run the app locally to sign in with a test account in the
+        meantime.
       </Text>
     </Surface>
   )

@@ -26,7 +26,7 @@ export default function SignUpScreen() {
 
   const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD
   const canSubmit =
-    email.trim().length > 0 && password.length >= MIN_PASSWORD && !busy
+    isAuthAvailable && email.trim().length > 0 && password.length >= MIN_PASSWORD && !busy
 
   async function submit() {
     if (!canSubmit) return
