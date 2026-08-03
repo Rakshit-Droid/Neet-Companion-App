@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Pressable, View } from "react-native"
 import { router, useFocusEffect } from "expo-router"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 
 import { Screen } from "@/components/Screen"
 import { Surface } from "@/components/Surface"
@@ -41,9 +41,16 @@ export default function DashboardScreen() {
 
   const moved = watches.filter((w) => w.change !== null && w.change !== 0)
 
-  const reachable = profile.rank
-    ? rankToColleges(profile.rank, profile.category, profile.course, { limit: 1 }).total
-    : null
+  // Binary-searches the cutoff table. Cheap, but it ran on every render of the
+  // first screen — including each keystroke elsewhere in the tree and every
+  // credit-balance update.
+  const reachable = useMemo(
+    () =>
+      profile.rank
+        ? rankToColleges(profile.rank, profile.category, profile.course, { limit: 1 }).total
+        : null,
+    [profile.rank, profile.category, profile.course],
+  )
 
   return (
     <Screen title={greeting(user?.displayName ?? null)}>

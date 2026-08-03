@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Pressable, View } from "react-native"
 import { useFocusEffect } from "expo-router"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 
 import { Screen } from "@/components/Screen"
 import { Surface } from "@/components/Surface"
@@ -10,7 +10,7 @@ import { radius, space, useTheme } from "@/theme"
 import { CATEGORY_LABEL, LATEST_CUTOFF_YEAR, formatIndian } from "@/lib/predictors"
 import { listWatches, removeWatch, type WatchStatus } from "@/lib/watchlist"
 import { RoundLadder } from "@/components/RoundLadder"
-import { roundEvidence } from "@/lib/rounds"
+import { roundEvidence, type RoundEvidence } from "@/lib/rounds"
 import { useProfile } from "@/state/profile"
 
 export default function WatchlistScreen() {
@@ -30,6 +30,27 @@ export default function WatchlistScreen() {
 
   // Re-read on focus so removing a college elsewhere is reflected here.
   useFocusEffect(load)
+
+  // Computed once per list rather than inside the render loop: every watched
+  // college was rebuilding its own evidence array on each render.
+  const roundsBySlug = useMemo(() => {
+    const map = new Map<string, RoundEvidence[]>()
+    if (!items || !profile.rank) return map
+    for (const item of items) {
+      if (!item.current?.quota) continue
+      map.set(
+        item.college.slug,
+        roundEvidence(
+          item.college.slug,
+          item.current.category,
+          item.current.course,
+          item.current.quota,
+          profile.rank,
+        ),
+      )
+    }
+    return map
+  }, [items, profile.rank])
 
   async function drop(slug: string) {
     await removeWatch(slug)
@@ -135,15 +156,7 @@ export default function WatchlistScreen() {
                   <Text variant="label" tone="muted">
                     Rounds at AIR {formatIndian(profile.rank)}
                   </Text>
-                  <RoundLadder
-                    rounds={roundEvidence(
-                      item.college.slug,
-                      item.current.category,
-                      item.current.course,
-                      item.current.quota,
-                      profile.rank,
-                    )}
-                  />
+                  <RoundLadder rounds={roundsBySlug.get(item.college.slug) ?? []} />
                 </View>
               ) : null}
 

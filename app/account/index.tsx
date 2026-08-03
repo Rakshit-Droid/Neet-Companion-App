@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Pressable, View } from "react-native"
 import { router } from "expo-router"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 
 import { Screen } from "@/components/Screen"
 import { Surface } from "@/components/Surface"

@@ -38,8 +38,7 @@
           ]
         }
       ],
-      "expo-splash-screen",
-      "expo-secure-store"
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

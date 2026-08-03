@@ -6,7 +6,7 @@ import {
   type KeyboardTypeOptions,
   type TextInputProps,
 } from "react-native"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 
 import { layout, radius, space, type as typeScale, useTheme } from "@/theme"
 import { Text } from "./Text"

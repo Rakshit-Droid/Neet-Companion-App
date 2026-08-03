@@ -1,5 +1,5 @@
 import { View } from "react-native"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 
 import { Screen } from "@/components/Screen"
 import { Surface } from "@/components/Surface"

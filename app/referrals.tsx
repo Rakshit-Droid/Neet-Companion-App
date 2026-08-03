@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import { Pressable, Share, View } from "react-native"
 import { router, useFocusEffect } from "expo-router"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 import * as Clipboard from "expo-clipboard"
 
 import { Screen } from "@/components/Screen"

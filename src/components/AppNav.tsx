@@ -1,5 +1,5 @@
 import { Platform, Pressable, View, useWindowDimensions } from "react-native"
-import { Feather } from "@expo/vector-icons"
+import Feather from "@expo/vector-icons/Feather"
 import { router, usePathname } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import * as Haptics from "expo-haptics"

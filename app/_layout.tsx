@@ -4,11 +4,12 @@ import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { useFonts } from "expo-font"
 import * as SplashScreen from "expo-splash-screen"
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from "@expo-google-fonts/inter"
+// Imported one weight at a time. The package barrel re-exports every weight and
+// italic, and Expo bundles every font it can reach from an import — that alone
+// was shipping ~6MB of Inter for the three faces this app actually renders.
+import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular"
+import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium"
+import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold"
 
 import { ThemeProvider, useTheme } from "@/theme"
 import { SessionProvider } from "@/state/session"
