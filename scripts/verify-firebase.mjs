@@ -90,18 +90,25 @@ let idToken = null
   record("Email/Password sign-in enabled", ok, detail)
 }
 
-// 3. Password reset. Real email, and the first thing that proves SMTP works.
+// 3. Password reset.
+//
+// This proves Firebase ACCEPTED the request, not that an email went out.
+// Projects created recently have email enumeration protection on by default, and
+// with it on a reset for an address with no account returns success and sends
+// nothing — deliberately, so the endpoint cannot be used to test which addresses
+// are registered. So a pass here is necessary but not sufficient; the only proof
+// of delivery is the message arriving, or appearing in the provider's log.
 {
   const { ok, json } = await call("accounts:sendOobCode", {
     requestType: "PASSWORD_RESET",
     email,
   })
   const detail = ok
-    ? "Check the inbox — and https://resend.com/emails if SMTP is pointed there."
+    ? "Accepted — but nothing is sent if this address has no account. Sign up first, then check the inbox, spam, and your SMTP provider's log."
     : code(json) === "EMAIL_NOT_FOUND"
       ? `No account exists for ${email} yet. Sign up in the app first, then re-run.`
       : code(json)
-  record("Password reset email accepted", ok, detail)
+  record("Password reset request accepted", ok, detail)
 }
 
 // 4. Magic link. Fails loudly when the continue domain is not authorised.
@@ -116,8 +123,11 @@ let idToken = null
       canHandleCodeInApp: true,
     })
     const c = code(json)
+    // Unlike a reset, this one always sends: an email-link sign-in creates the
+    // account if it does not exist, so there is nothing to keep quiet about.
+    // If this arrives and the reset does not, the reset address has no account.
     const detail = ok
-      ? `Continue URL: ${continueUrl}`
+      ? `Sent — this one always delivers. Continue URL: ${continueUrl}`
       : c === "OPERATION_NOT_ALLOWED"
         ? "Email link sign-in is off. It is the SECOND toggle inside the Email/Password provider."
         : c.startsWith("UNAUTHORIZED_DOMAIN") || c.includes("DOMAIN_NOT_ALLOWLISTED")
