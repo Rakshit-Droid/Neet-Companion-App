@@ -6,7 +6,7 @@ import { Text } from "@/components/Text"
 import { Field } from "@/components/Field"
 import { Button } from "@/components/Button"
 import { space } from "@/theme"
-import { authErrorMessage, isAuthAvailable, sendReset } from "@/lib/auth"
+import { authErrorMessage, isAuthAvailable, isMockAuthEnabled, sendReset } from "@/lib/auth"
 import { NotConfiguredNotice } from "./sign-in"
 
 export default function ForgotPasswordScreen() {
@@ -33,7 +33,23 @@ export default function ForgotPasswordScreen() {
     <Screen title="Reset password" back>
       {!isAuthAvailable ? <NotConfiguredNotice /> : null}
 
-      {sent ? (
+      {sent && isMockAuthEnabled ? (
+        // The stand-in has no mailbox. Saying "check your email" here sends
+        // people to an inbox that will never receive anything, and they blame
+        // their spam filter rather than the missing config.
+        <Surface style={{ gap: space.sm }}>
+          <Text variant="h2">No email was sent</Text>
+          <Text variant="bodyRegular" tone="secondary">
+            Accounts are running on a local stand-in because this build has no Firebase
+            configuration, and the stand-in has no mailbox. Nothing will arrive at{" "}
+            {email.trim()}.
+          </Text>
+          <Text variant="caption" tone="muted">
+            Passwords here live only on this device. Sign in with the development account, or
+            create a new one — any password you choose is accepted.
+          </Text>
+        </Surface>
+      ) : sent ? (
         <Surface style={{ gap: space.sm }}>
           <Text variant="h2">Check your email</Text>
           <Text variant="bodyRegular" tone="secondary">
