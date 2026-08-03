@@ -45,12 +45,12 @@
         "projectId": "fb81e908-6099-4540-9c8a-91566a6f2a75"
       },
       "firebase": {
-        "apiKey": "",
-        "authDomain": "",
-        "projectId": "",
-        "storageBucket": "",
-        "messagingSenderId": "",
-        "appId": ""
+        "apiKey": "AIzaSyA8oYR46eP4nA6mKUHXoewFo_4EoBJUZCE",
+        "authDomain": "neet-companion-4c9bb.firebaseapp.com",
+        "projectId": "neet-companion-4c9bb",
+        "storageBucket": "neet-companion-4c9bb.firebasestorage.app",
+        "messagingSenderId": "764950840891",
+        "appId": "1:764950840891:web:45c9bb395c847d15bafe1e"
       },
       "magicLinkUrl": "https://neet-companion-app-five.vercel.app/magic-link"
     }

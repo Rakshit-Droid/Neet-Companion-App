@@ -58,5 +58,6 @@ data/api-dump.json
 /ios
 /android
 
-# scratch file for pasting the firebaseConfig block into
-firebase.txt
+# scratch file for pasting the firebaseConfig block into. Windows adds a
+# second extension when you name a file in the editor, hence the glob.
+firebase.txt*
