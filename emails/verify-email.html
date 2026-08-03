@@ -1,0 +1,70 @@
+<!--
+  Firebase Auth → Templates → Email address verification.
+
+  Nothing in the app calls this yet — sendEmailVerification() is not wired up.
+  It is here so the template is not left on Firebase's default wording if
+  verification is switched on later, e.g. before a purchase is allowed.
+
+  Paste only what is between the BODY markers. %LINK% must survive intact.
+-->
+<!-- BODY -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+
+        <tr>
+          <td style="padding-bottom:28px;">
+            <span style="font-family:Helvetica,Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;color:#0a0a0a;">NEET&nbsp;COMPANION</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="font-family:Helvetica,Arial,sans-serif;font-size:24px;line-height:30px;font-weight:bold;color:#0a0a0a;padding-bottom:14px;">
+            Confirm your email
+          </td>
+        </tr>
+
+        <tr>
+          <td style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#0a0a0a;padding-bottom:24px;">
+            Confirm that <strong>%EMAIL%</strong> is yours. This is the address your credits, watchlist and any password reset are tied to, so it matters that it reaches you.
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding-bottom:24px;">
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td bgcolor="#7ccf00" style="border-radius:10px;">
+                  <a href="%LINK%" style="display:inline-block;padding:14px 28px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#12200a;text-decoration:none;">Confirm this address</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#646464;padding-bottom:24px;">
+            If the button does nothing, copy this into your browser:<br>
+            <a href="%LINK%" style="color:#3f6600;word-break:break-all;">%LINK%</a>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="border-top:1px solid #e5e5e5;padding-top:20px;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#646464;">
+            <strong style="color:#0a0a0a;">Didn't sign up?</strong> Someone typed this address by mistake. Ignore this email and no account is confirmed against it.
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding-top:28px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#646464;">
+            NEET Companion — counselling built on real MCC results.<br>
+            This is an automated message about your account, so there is nothing to unsubscribe from.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- /BODY -->

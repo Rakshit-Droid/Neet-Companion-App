@@ -1,0 +1,102 @@
+<!--
+  Product email, sent by us over the Resend HTTP API. Not a Firebase template,
+  so it carries the full design and can use a <style> block.
+
+  Trigger: account created.
+  Placeholders: {{name}} (may be empty), {{credits}}, {{appUrl}}, {{unsubscribeUrl}}
+
+  If {{name}} is empty, render the greeting as "Welcome" with no trailing comma.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Welcome to NEET Companion</title>
+<style>
+  /* Dark-mode aware where the client supports it; the inline styles below are
+     the fallback everywhere else. */
+  @media (prefers-color-scheme: dark) {
+    .page { background:#0a0a0a !important; }
+    .card { background:#171717 !important; border-color:#27272a !important; }
+    .t-strong { color:#fafafa !important; }
+    .t-muted { color:#a1a1a1 !important; }
+    .rule { border-color:#27272a !important; }
+  }
+  @media only screen and (max-width:480px) {
+    .pad { padding-left:20px !important; padding-right:20px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;">
+<table class="page" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table class="card" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e5e5e5;border-radius:18px;">
+        <tr>
+          <td class="pad" style="padding:32px;">
+
+            <div style="padding-bottom:28px;">
+              <span class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;color:#0a0a0a;">NEET&nbsp;COMPANION</span>
+            </div>
+
+            <div class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:26px;line-height:32px;font-weight:bold;color:#0a0a0a;padding-bottom:14px;">
+              Welcome{{#name}}, {{name}}{{/name}}
+            </div>
+
+            <div class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#0a0a0a;padding-bottom:20px;">
+              Your account is ready, and <strong>{{credits}} credits</strong> are already in it. That is enough to build your first few choice lists.
+            </div>
+
+            <div class="t-muted" style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#646464;padding-bottom:8px;">
+              What the app actually does:
+            </div>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-bottom:24px;">
+              <tr>
+                <td class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#0a0a0a;padding:6px 0;">
+                  <strong>Orders your choice list properly.</strong><br>
+                  <span class="t-muted" style="color:#646464;">Counselling allots the highest preference you clear, so the list is ordered by what you want — not by what is easiest to get.</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#0a0a0a;padding:6px 0;">
+                  <strong>Shows every round, with its evidence.</strong><br>
+                  <span class="t-muted" style="color:#646464;">Seven years of real MCC results, and the sample size behind each call. No invented percentages.</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#0a0a0a;padding:6px 0;">
+                  <strong>Watches colleges for you.</strong><br>
+                  <span class="t-muted" style="color:#646464;">Track a seat and see what moves as the rounds go by.</span>
+                </td>
+              </tr>
+            </table>
+
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+              <tr>
+                <td bgcolor="#7ccf00" style="border-radius:10px;">
+                  <a href="{{appUrl}}" style="display:inline-block;padding:14px 28px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#12200a;text-decoration:none;">Build my first list</a>
+                </td>
+              </tr>
+            </table>
+
+            <div class="rule" style="border-top:1px solid #e5e5e5;padding-top:20px;">
+              <div class="t-muted" style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#646464;">
+                Predictions are indicative. Past cutoffs do not guarantee future ones — always verify against mcc.nic.in and your state counselling authority before acting on a list.
+              </div>
+            </div>
+
+            <div class="t-muted" style="padding-top:24px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#646464;">
+              NEET Companion<br>
+              <a href="{{unsubscribeUrl}}" style="color:#646464;">Unsubscribe from emails like this</a> — account and security emails will still reach you.
+            </div>
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

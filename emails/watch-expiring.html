@@ -1,0 +1,95 @@
+<!--
+  Product email, sent by us over the Resend HTTP API.
+
+  Trigger: a watched college's paid week ends within 2 days AND the balance
+  cannot cover the renewal. Do NOT send when the renewal will simply succeed —
+  that is a silent, automatic charge and emailing about it is noise.
+
+  Placeholders: {{name}}, {{colleges}} (list of {name, state, daysLeft}),
+                {{watchPrice}}, {{balance}}, {{creditsUrl}}, {{unsubscribeUrl}}
+
+  RATE LIMIT: one per user per week, covering every expiring college at once.
+  Never one email per college.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A college you watch is about to stop being tracked</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    .page { background:#0a0a0a !important; }
+    .card { background:#171717 !important; border-color:#27272a !important; }
+    .t-strong { color:#fafafa !important; }
+    .t-muted { color:#a1a1a1 !important; }
+    .rule { border-color:#27272a !important; }
+    .row { border-color:#27272a !important; }
+  }
+  @media only screen and (max-width:480px) {
+    .pad { padding-left:20px !important; padding-right:20px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;">
+<table class="page" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table class="card" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e5e5e5;border-radius:18px;">
+        <tr>
+          <td class="pad" style="padding:32px;">
+
+            <div style="padding-bottom:28px;">
+              <span class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;color:#0a0a0a;">NEET&nbsp;COMPANION</span>
+            </div>
+
+            <div class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:24px;line-height:30px;font-weight:bold;color:#0a0a0a;padding-bottom:14px;">
+              Your watchlist is about to pause
+            </div>
+
+            <div class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#0a0a0a;padding-bottom:20px;">
+              Watching costs {{watchPrice}} credits per college each week, and your balance is <strong>{{balance}}</strong>. These renewals cannot go through:
+            </div>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+              {{#colleges}}
+              <tr>
+                <td class="row" style="border-bottom:1px solid #e5e5e5;padding:10px 0;">
+                  <div class="t-strong" style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:20px;font-weight:bold;color:#0a0a0a;">{{name}}</div>
+                  <div class="t-muted" style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:19px;color:#646464;">{{state}} — {{daysLeft}} days left</div>
+                </td>
+              </tr>
+              {{/colleges}}
+            </table>
+
+            <div class="t-muted" style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:22px;color:#646464;padding-bottom:20px;">
+              <strong class="t-strong" style="color:#0a0a0a;">Nothing gets deleted.</strong> Each college stays on your list with the figures it had when the week ran out. It simply stops following the rounds until you top up, and picks straight back up when you do.
+            </div>
+
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+              <tr>
+                <td bgcolor="#7ccf00" style="border-radius:10px;">
+                  <a href="{{creditsUrl}}" style="display:inline-block;padding:14px 28px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#12200a;text-decoration:none;">Top up and keep tracking</a>
+                </td>
+              </tr>
+            </table>
+
+            <div class="rule" style="border-top:1px solid #e5e5e5;padding-top:20px;">
+              <div class="t-muted" style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#646464;">
+                Cutoffs update when a new version of the app ships with refreshed MCC data, not live during counselling. Check mcc.nic.in for the current round.
+              </div>
+            </div>
+
+            <div class="t-muted" style="padding-top:24px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#646464;">
+              NEET Companion<br>
+              <a href="{{unsubscribeUrl}}" style="color:#646464;">Unsubscribe from emails like this</a> — account and security emails will still reach you.
+            </div>
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
