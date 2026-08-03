@@ -140,8 +140,16 @@ function finish() {
   console.log()
   if (failed.length === 0) {
     console.log("All checks passed. Restart with a cleared cache: npx expo start -c\n")
-    console.log("Then remove EXPO_PUBLIC_ALLOW_DEV_AUTH=1 from vercel.json — the dev")
-    console.log("sign-in is dead now that real config exists, so the flag is dead weight.\n")
+    // Only worth mentioning while the flag is still there; saying it once it has
+    // been removed sends people looking for something that is already done.
+    try {
+      if (readFileSync("vercel.json", "utf8").includes("EXPO_PUBLIC_ALLOW_DEV_AUTH")) {
+        console.log("Then remove EXPO_PUBLIC_ALLOW_DEV_AUTH=1 from vercel.json — the dev")
+        console.log("sign-in is dead now that real config exists, so the flag is dead weight.\n")
+      }
+    } catch {
+      // No vercel.json is fine; nothing to advise about.
+    }
     process.exit(0)
   }
   console.log(`${failed.length} check${failed.length === 1 ? "" : "s"} failed. Fix and re-run.\n`)
