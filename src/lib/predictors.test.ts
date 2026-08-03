@@ -321,17 +321,84 @@ test("COLLEGE_TYPES matches the types actually present", () => {
   assert.ok(COLLEGE_TYPES.includes("State Govt"))
 })
 
-test("buildChoiceList orders aspirational first and tallies tiers", () => {
+test("buildChoiceList numbers choices and reports counts over the full result set", () => {
   const list = buildChoiceList({ rank: 50_000, category: "UR", course: "MBBS" })
   assert.ok(list.total > 0)
-  assert.equal(list.choices[0]?.order, 1)
-
-  const closings = list.choices.map((c) => c.college.closing)
-  assert.deepEqual(closings, [...closings].sort((a, b) => a - b))
-
+  assert.deepEqual(
+    list.choices.map((c) => c.order),
+    list.choices.map((_, i) => i + 1),
+  )
+  // counts describe every reachable seat, not just the truncated page.
   const tallied = list.counts.Safe + list.counts.Moderate + list.counts.Reach
-  assert.equal(tallied, list.choices.length)
+  assert.ok(tallied >= list.choices.length)
   assert.ok(list.choices.every((c) => c.advice.length > 0))
+  assert.ok(list.choices.every((c) => c.college.closing >= 50_000))
+})
+
+test("buildChoiceList orders by preference, not by cutoff", () => {
+  const states = ["KA"]
+  const plain = buildChoiceList({ rank: 60_000, category: "UR", course: "MBBS" })
+  const biased = buildChoiceList({
+    rank: 60_000,
+    category: "UR",
+    course: "MBBS",
+    preferredStates: states,
+    weights: { state: 5 },
+  })
+
+  const firstBiased = biased.choices[0]
+  assert.ok(firstBiased, "expected results")
+  // A heavy home-state weight must pull a Karnataka seat to the top.
+  assert.equal(firstBiased.college.stateCode, "KA")
+  assert.notDeepEqual(
+    plain.choices.map((c) => c.college.slug),
+    biased.choices.map((c) => c.college.slug),
+  )
+})
+
+test("the anchor warning fires exactly when no Safe seat is listed", () => {
+  // Invariant across the whole rank range, rather than pinning example ranks:
+  // a strong rank makes everything Safe, a rank at the edge of the field clears
+  // only Reach seats, and the warning must track that and nothing else.
+  const ranks = [1, 5_000, 50_000, 200_000, 600_000, 900_000]
+  let sawWarning = false
+  let sawAnchor = false
+
+  for (const rank of ranks) {
+    const list = buildChoiceList({ rank, category: "UR", course: "all" })
+    if (list.choices.length === 0) continue
+
+    const hasSafe = list.choices.some((c) => c.college.tier === "Safe")
+    assert.equal(list.guidance.hasAnchor, hasSafe, `hasAnchor wrong at rank ${rank}`)
+    assert.equal(
+      list.guidance.warning,
+      hasSafe ? null : "NO_ANCHOR",
+      `warning wrong at rank ${rank}`,
+    )
+    sawWarning ||= !hasSafe
+    sawAnchor ||= hasSafe
+  }
+
+  assert.ok(sawAnchor, "expected at least one rank with an anchor")
+  assert.ok(sawWarning, "expected at least one rank without an anchor")
+})
+
+test("buildChoiceList attaches real round history, never a forecast", () => {
+  const list = buildChoiceList({ rank: 40_000, category: "UR", course: "MBBS", limit: 10 })
+  const withRounds = list.choices.find((c) => c.rounds.length > 1)
+  assert.ok(withRounds, "expected at least one seat with several rounds")
+
+  const orders = withRounds.rounds.map((r) => r.closing)
+  assert.ok(orders.every((n) => n > 0))
+  assert.equal(
+    withRounds.seats,
+    withRounds.rounds.reduce((n, r) => n + r.seats, 0),
+  )
+  // clearsFromRound must point at a round that genuinely reaches the rank.
+  if (withRounds.clearsFromRound) {
+    const row = withRounds.rounds.find((r) => r.round === withRounds.clearsFromRound)
+    assert.ok(row && row.closing >= 40_000)
+  }
 })
 
 test("collegeDetail assembles everything the college page needs", () => {

@@ -423,6 +423,30 @@ for (const r of ROUNDS) {
 const INDEX_BY_SLUG = new Map<string, number>()
 COLLEGES.forEach((c, i) => INDEX_BY_SLUG.set(c.slug, i))
 
+/**
+ * Round-by-round rows for one exact seat type in the latest year, in round order.
+ * Used by choice filling to show where a seat actually closed rather than
+ * predicting where it might.
+ */
+export function roundsFor(
+  slug: string,
+  category: Category,
+  course: Course,
+  quota?: string,
+): RoundCutoff[] {
+  const index = INDEX_BY_SLUG.get(slug)
+  if (index === undefined) return []
+  return (ROUNDS_BY_COLLEGE.get(index) ?? [])
+    .filter(
+      (r) =>
+        r.year === LATEST_CUTOFF_YEAR &&
+        r.category === category &&
+        r.course === course &&
+        (!quota || r.quota === quota),
+    )
+    .sort((a, b) => a.roundOrder - b.roundOrder)
+}
+
 export function collegeBySlug(slug: string): College | null {
   const i = INDEX_BY_SLUG.get(slug)
   return i === undefined ? null : COLLEGES[i]!

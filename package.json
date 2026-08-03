@@ -35,7 +35,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node -e \"require(\\\"fs\\\").rmSync(\\\".tmp-test\\\",{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test \".tmp-test/**/*.test.js\""
+    "test": "node -e \"require(\\\"fs\\\").rmSync(\\\".tmp-test\\\",{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test \".tmp-test/**/*.test.js\"",
+    "backtest": "npm test --silent >/dev/null 2>&1; node scripts/backtest.mjs"
   },
   "private": true,
   "overrides": {
