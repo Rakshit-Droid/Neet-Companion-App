@@ -17,28 +17,28 @@ an SMTP server to relay through. That is what section 2 does.
 
 ---
 
-## 1. Resend: verify a domain
+## 1. Resend: the sending domain
 
-Emails must come from a domain you own. `onboarding@resend.dev` works for testing
-but must never be used in production — it is shared, and Firebase will happily
-send real password resets from it.
+**Already done.** `forms.neetcompanion.com` is verified in Resend with sending
+enabled, so there is no DNS work for this. Send as:
 
-1. <https://resend.com/domains> → **Add Domain**.
-2. Enter the domain you will send from. A subdomain is the better choice:
-   **`mail.neetcompanion.com`** rather than the bare domain. Sending from a
-   subdomain keeps a deliverability problem with marketing mail from poisoning
-   the reputation of your transactional mail, and vice versa.
-3. Resend shows DNS records to add — an MX record, and TXT records for SPF and
-   DKIM. Add them at whoever hosts the domain's DNS.
-4. Wait for all records to show **Verified**. This is usually minutes but the TTL
-   on existing records can make it an hour.
+```
+no-reply@forms.neetcompanion.com
+```
 
-Do not skip DKIM. Without it Gmail marks the mail as unauthenticated, and
-password resets land in spam — which reads to users as the app being broken.
+It must be on that subdomain. Resend rejects a From address on a domain it has
+not verified, and the root `neetcompanion.com` is not verified — its MX points at
+Zoho, which is the real inbox and should stay untouched.
 
-Recommended once verified: add a **DMARC** record (`_dmarc.mail.neetcompanion.com`,
-`v=DMARC1; p=none; rua=mailto:you@neetcompanion.com`). Start at `p=none`, which
-only reports and never blocks.
+`onboarding@resend.dev` works for a smoke test but must never reach production:
+it is shared infrastructure, and Firebase will happily send real password resets
+from it.
+
+Worth adding at some point: the domain has **no DMARC record**. Add a TXT record
+named `_dmarc` with `v=DMARC1; p=none; rua=mailto:you@neetcompanion.com`.
+`p=none` only reports and never blocks, so it is safe to add today, and it
+protects the Zoho mail as well as this. DNS for the domain is at Hostinger —
+nameservers are `ns1/ns2.dns-parking.com`.
 
 ---
 
@@ -67,7 +67,7 @@ Firebase console → **Authentication** → **Templates** → **SMTP settings** 
 link sits above the template list, not inside a template).
 
 - **Sender name:** `NEET Companion`
-- **Sender address:** `no-reply@mail.neetcompanion.com` — must be on the domain
+- **Sender address:** `no-reply@forms.neetcompanion.com` — must be on the domain
   verified in step 1, or Resend rejects the message
 - **SMTP server address:** `smtp.resend.com`
 - **Port:** `587`
@@ -83,10 +83,16 @@ Firebase gives you.
 ### The API key IS a secret
 
 Unlike the Firebase `apiKey`, which is public by design, the Resend key can send
-mail as your domain. It belongs in the Firebase console and in Cloud Functions
-config only. **Never** put it in `app.json`, in the repo, or in any
-`EXPO_PUBLIC_*` variable — those are compiled into the client and readable by
-anyone who installs the app.
+mail as your domain — that is a spoofing and reputation risk, not a minor one.
+It belongs in the Firebase console and in Cloud Functions config only.
+
+**Never** put it in `app.json`, in this repo, or in any `EXPO_PUBLIC_*` variable.
+Those are compiled into the client and readable by anyone who installs the app.
+There is deliberately no Resend key anywhere in this codebase.
+
+If a key has ever been pasted into a chat, a ticket, or a screenshot, treat it as
+compromised and rotate it: create a new key at <https://resend.com/api-keys>,
+update the Firebase SMTP password, then delete the old one.
 
 ---
 
