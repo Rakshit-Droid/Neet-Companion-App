@@ -52,7 +52,8 @@
         "messagingSenderId": "764950840891",
         "appId": "1:764950840891:web:45c9bb395c847d15bafe1e"
       },
-      "magicLinkUrl": "https://neet-companion-app-five.vercel.app/magic-link"
+      "magicLinkUrl": "https://neet-companion-app-five.vercel.app/magic-link",
+      "apiBaseUrl": "https://neet-companion-app-five.vercel.app"
     }
   }
 }

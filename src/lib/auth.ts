@@ -119,8 +119,45 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
   return toAuthUser(cred.user)
 }
 
+/**
+ * Where the serverless function lives. Absolute, because on a phone there is no
+ * origin to be relative to.
+ */
+function apiBase(): string {
+  const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string }
+  return extra.apiBaseUrl ?? "https://neet-companion-app-five.vercel.app"
+}
+
+/**
+ * Asks our own endpoint to send the email.
+ *
+ * Firebase composes auth emails from templates this project is not allowed to
+ * edit — the console reports "Email template updates are currently unavailable"
+ * and the admin API refuses the same write — so the alternative is to generate
+ * the link with the Admin SDK and deliver it ourselves. Returns false if the
+ * endpoint could not do it, so the caller can fall back rather than strand
+ * someone who cannot get into their account.
+ */
+async function sendViaApi(type: "reset" | "signin", email: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${apiBase()}/api/auth-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, email: email.trim() }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 export async function sendReset(email: string): Promise<void> {
   if (isMockAuthEnabled) return mockSendReset(email)
+  if (await sendViaApi("reset", email)) return
+
+  // Falling back to Firebase's own sender sends an unstyled email, which is
+  // worse than the designed one but far better than a user who cannot reset
+  // their password because our endpoint was down.
   const auth = requireAuth()
   await sendPasswordResetEmail(auth, email.trim())
 }
@@ -177,6 +214,7 @@ export async function sendMagicLink(email: string): Promise<MagicLinkRequest> {
   await AsyncStorage.setItem(PENDING_EMAIL_KEY, address)
 
   if (isMockAuthEnabled) return mockSendMagicLink(address)
+  if (await sendViaApi("signin", address)) return {}
 
   const auth = requireAuth()
   await sendSignInLinkToEmail(auth, address, {

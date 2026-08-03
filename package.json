@@ -16,6 +16,7 @@
     "expo-splash-screen": "~57.0.5",
     "expo-status-bar": "~57.0.1",
     "firebase": "^12.17.0",
+    "firebase-admin": "^14.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
@@ -36,6 +37,7 @@
     "firebase:config": "node scripts/set-firebase-config.mjs",
     "firebase:verify": "node scripts/verify-firebase.mjs",
     "firebase:templates": "node scripts/set-firebase-templates.mjs",
+    "build:emails": "node scripts/build-email-modules.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node -e \"require(\\\"fs\\\").rmSync(\\\".tmp-test\\\",{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test \".tmp-test/**/*.test.js\"",
     "backtest": "npm test --silent >/dev/null 2>&1; node scripts/backtest.mjs"
