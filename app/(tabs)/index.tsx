@@ -76,6 +76,7 @@ export default function PredictorScreen() {
             value={marks}
             onChangeText={setMarks}
             placeholder="0"
+            keyboardType="number-pad"
             suffix={`/ ${MAX_MARKS}`}
             error={valid ? undefined : `Enter a score between 0 and ${MAX_MARKS}`}
           />
@@ -85,6 +86,7 @@ export default function PredictorScreen() {
             value={rank}
             onChangeText={setRank}
             placeholder="0"
+            keyboardType="number-pad"
             error={valid ? undefined : "Enter a rank above 0"}
           />
         )}

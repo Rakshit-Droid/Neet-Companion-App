@@ -38,11 +38,20 @@
           ]
         }
       ],
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
         "projectId": "fb81e908-6099-4540-9c8a-91566a6f2a75"
+      },
+      "firebase": {
+        "apiKey": "",
+        "authDomain": "",
+        "projectId": "",
+        "storageBucket": "",
+        "messagingSenderId": "",
+        "appId": ""
       }
     }
   }

@@ -7,7 +7,7 @@ import * as Haptics from "expo-haptics"
 
 import { layout, radius, space, useTheme } from "@/theme"
 import { Text } from "./Text"
-import { ThemeToggle } from "./ThemeToggle"
+import { AccountButton } from "./AccountButton"
 
 interface ScreenProps {
   title: string
@@ -81,7 +81,7 @@ export function Screen({ title, eyebrow, back = false, children }: ScreenProps) 
             ) : null}
             <Text variant="h1">{title}</Text>
           </View>
-          <ThemeToggle />
+          <AccountButton />
         </View>
         {children}
       </View>

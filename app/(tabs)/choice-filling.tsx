@@ -41,6 +41,7 @@ export default function ChoiceFillingScreen() {
           value={rank}
           onChangeText={setRank}
           placeholder="0"
+          keyboardType="number-pad"
           error={valid ? undefined : "Enter a rank above 0"}
         />
         <Segmented

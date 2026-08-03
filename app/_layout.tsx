@@ -11,6 +11,7 @@ import {
 } from "@expo-google-fonts/inter"
 
 import { ThemeProvider, useTheme } from "@/theme"
+import { SessionProvider } from "@/state/session"
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -31,7 +32,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <ThemedStack />
+      <SessionProvider>
+        <ThemedStack />
+      </SessionProvider>
     </ThemeProvider>
   )
 }

@@ -1,4 +1,10 @@
-import { Platform, Pressable, type StyleProp, type ViewStyle } from "react-native"
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native"
 import * as Haptics from "expo-haptics"
 
 import { layout, radius, space, useTheme } from "@/theme"
@@ -9,6 +15,8 @@ interface ButtonProps {
   onPress?: () => void
   variant?: "accent" | "secondary"
   disabled?: boolean
+  /** Shows a spinner and blocks presses, so a slow request cannot be double-fired. */
+  loading?: boolean
   style?: StyleProp<ViewStyle>
 }
 
@@ -21,15 +29,17 @@ export function Button({
   onPress,
   variant = "accent",
   disabled = false,
+  loading = false,
   style,
 }: ButtonProps) {
   const t = useTheme()
+  const blocked = disabled || loading
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: blocked, busy: loading }}
+      disabled={blocked}
       onPress={onPress}
       onPressIn={() => {
         if (Platform.OS !== "web") {
@@ -46,14 +56,18 @@ export function Button({
           borderWidth: 1,
           backgroundColor: variant === "accent" ? t.accent : t.surface,
           borderColor: variant === "accent" ? t.accent : t.border,
-          opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
+          opacity: blocked ? 0.5 : pressed ? 0.85 : 1,
         },
         style,
       ]}
     >
-      <Text variant="h2" tone={variant === "accent" ? "onAccent" : "default"}>
-        {label}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color={variant === "accent" ? t.onAccent : t.text} />
+      ) : (
+        <Text variant="h2" tone={variant === "accent" ? "onAccent" : "default"}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   )
 }
