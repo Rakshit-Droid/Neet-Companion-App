@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import { Pressable, View } from "react-native"
-import { router, useFocusEffect } from "expo-router"
+import { useFocusEffect } from "expo-router"
 import { Feather } from "@expo/vector-icons"
 
 import { Screen } from "@/components/Screen"
@@ -63,17 +63,12 @@ export default function WatchlistScreen() {
                   gap: space.sm,
                 }}
               >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${item.college.name}`}
-                  onPress={() => router.push(`/college/${item.college.slug}`)}
-                  style={{ flex: 1 }}
-                >
+                <View style={{ flex: 1 }}>
                   <Text variant="body">{item.college.name}</Text>
                   <Text variant="bodySm" tone="muted">
                     {item.college.state}, {item.college.type}
                   </Text>
-                </Pressable>
+                </View>
 
                 <Pressable
                   accessibilityRole="button"

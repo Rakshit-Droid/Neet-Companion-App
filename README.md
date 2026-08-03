@@ -1,16 +1,26 @@
 # NEET Companion
 
-Native app for NEET UG aspirants: predict your All India Rank from your score, and see which medical colleges are actually reachable at that rank.
+Counselling companion for NEET UG aspirants: build an ordered choice-filling list from seven years of real MCC results.
 
 Built with Expo (React Native). Runs on Android, iOS, and the web, fully offline.
 
 ## What it does
 
-- **Predict** — score to rank to reachable seats, or enter a rank directly
-- **Colleges** — 604 institutes, searchable, filterable by region
-- **States** — 33 states, drill into every college
-- **Choices** — an ordered counselling preference list, aspirational first
-- **College detail** — closing ranks by year, round-by-round cutoffs with seat counts, per-category breakdown, and generated FAQs
+The website covers the free tools: predictors, the college directory and state
+browsing. This app deliberately does not duplicate any of that. It is the paid
+companion for the part the website does not do.
+
+- **Dashboard** — your saved rank, category and course; seats within reach; what
+  has moved on your watchlist
+- **All India Quota** — an ordered counselling list built from seven years of
+  real MCC results, weighted by what you actually want, with round-by-round
+  history and a warning when your list has no safe anchor
+- **Watchlist** — track colleges and see what changed since you added them
+- **State quota** — Telangana next, other states in progress
+
+Navigation adapts: bottom tabs on phones, a side rail on tablets.
+
+Browsing works signed out; the tools require an account.
 
 ## Data
 
