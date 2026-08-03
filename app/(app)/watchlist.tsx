@@ -8,7 +8,16 @@ import { Surface } from "@/components/Surface"
 import { Text } from "@/components/Text"
 import { radius, space, useTheme } from "@/theme"
 import { CATEGORY_LABEL, LATEST_CUTOFF_YEAR, formatIndian } from "@/lib/predictors"
-import { listWatches, removeWatch, type WatchStatus } from "@/lib/watchlist"
+import {
+  listWatches,
+  removeWatch,
+  renewDueWatches,
+  renewWatch,
+  type WatchStatus,
+} from "@/lib/watchlist"
+import { PRICE } from "@/lib/credits"
+import { useCredits } from "@/state/credits"
+import { Button } from "@/components/Button"
 import { RoundLadder } from "@/components/RoundLadder"
 import { roundEvidence, type RoundEvidence } from "@/lib/rounds"
 import { useProfile } from "@/state/profile"
@@ -16,17 +25,36 @@ import { useProfile } from "@/state/profile"
 export default function WatchlistScreen() {
   const t = useTheme()
   const { profile } = useProfile()
+  const { charge } = useCredits()
   const [items, setItems] = useState<WatchStatus[] | null>(null)
+  const [renewing, setRenewing] = useState<string | null>(null)
 
+  // Weekly renewal runs here rather than on a timer: with no server, "weekly"
+  // can only mean "the next time the app is opened after the week ended". A
+  // user who never opens the app is never charged, which is the right way round.
   const load = useCallback(() => {
     let cancelled = false
-    listWatches().then((v) => {
+    ;(async () => {
+      await renewDueWatches((amount, key, meta) => charge(amount, "watchlist", key, meta))
+      const v = await listWatches()
       if (!cancelled) setItems(v)
-    })
+    })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [charge])
+
+  async function renewOne(slug: string) {
+    setRenewing(slug)
+    try {
+      const ok = await renewWatch(slug, (amount, key, meta) =>
+        charge(amount, "watchlist", key, meta),
+      )
+      if (ok) setItems(await listWatches())
+    } finally {
+      setRenewing(null)
+    }
+  }
 
   // Re-read on focus so removing a college elsewhere is reflected here.
   useFocusEffect(load)
@@ -37,7 +65,7 @@ export default function WatchlistScreen() {
     const map = new Map<string, RoundEvidence[]>()
     if (!items || !profile.rank) return map
     for (const item of items) {
-      if (!item.current?.quota) continue
+      if (item.expired || !item.current?.quota) continue
       map.set(
         item.college.slug,
         roundEvidence(
@@ -88,10 +116,17 @@ export default function WatchlistScreen() {
                   gap: space.sm,
                 }}
               >
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, gap: 2 }}>
                   <Text variant="body">{item.college.name}</Text>
                   <Text variant="bodySm" tone="muted">
                     {item.college.state}, {item.college.type}
+                  </Text>
+                  <Text variant="caption" tone={item.expired ? "moderate" : "muted"}>
+                    {item.expired
+                      ? "Expired"
+                      : item.daysLeft === 1
+                        ? "1 day left this week"
+                        : `${item.daysLeft} days left this week`}
                   </Text>
                 </View>
 
@@ -143,7 +178,7 @@ export default function WatchlistScreen() {
 
               {/* The point of watching: how this seat behaves as counselling
                   moves through its rounds, judged against your saved rank. */}
-              {profile.rank && item.current?.quota ? (
+              {!item.expired && profile.rank && item.current?.quota ? (
                 <View
                   style={{
                     marginTop: space.xs,
@@ -157,6 +192,21 @@ export default function WatchlistScreen() {
                     Rounds at AIR {formatIndian(profile.rank)}
                   </Text>
                   <RoundLadder rounds={roundsBySlug.get(item.college.slug) ?? []} />
+                </View>
+              ) : null}
+
+              {item.expired ? (
+                <View style={{ gap: space.sm }}>
+                  <Text variant="caption" tone="moderate">
+                    Not tracking rounds. Its figures are from when the week ran out.
+                  </Text>
+                  <Button
+                    label={`Renew for ${PRICE.watchlist} credits`}
+                    variant="secondary"
+                    onPress={() => renewOne(item.college.slug)}
+                    loading={renewing === item.college.slug}
+                    disabled={renewing !== null}
+                  />
                 </View>
               ) : null}
 

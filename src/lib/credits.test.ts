@@ -74,13 +74,17 @@ beforeEach(() => {
 })
 
 test("the money constants are the ones the pricing screen sells", () => {
-  assert.deepEqual(PRICE, { search: 2, watchlist: 1, stateQuota: 5 })
+  // watchlist is per college PER WEEK and renews; the others are one-offs.
+  assert.deepEqual(PRICE, { search: 2, watchlist: 5, stateQuota: 5 })
   assert.equal(SIGNUP_GRANT, 10)
   assert.equal(CREDITS_PER_PACK, 50)
   assert.equal(PACK_PRICE_INR, 100)
   assert.equal(REFERRAL_REWARD, 50)
-  // 100 INR buys 50 credits, so a credit is 2 INR and a search costs 4.
+  // 100 INR buys 50 credits, so a credit is 2 INR: a search costs 4 and a week
+  // of watching one college costs 10.
   assert.equal(PACK_PRICE_INR / CREDITS_PER_PACK, 2)
+  assert.equal(PRICE.search * 2, 4)
+  assert.equal(PRICE.watchlist * 2, 10)
 })
 
 test("balance is the sum of the deltas and nothing else", async () => {
@@ -93,7 +97,10 @@ test("balance is the sum of the deltas and nothing else", async () => {
   await grant(UID, CREDITS_PER_PACK, "purchase", "pack-1")
 
   const entries = await readLedger(UID)
-  assert.equal(await getBalance(UID), SIGNUP_GRANT - 2 - 1 + CREDITS_PER_PACK)
+  assert.equal(
+    await getBalance(UID),
+    SIGNUP_GRANT - PRICE.search - PRICE.watchlist + CREDITS_PER_PACK,
+  )
   assert.equal(await getBalance(UID), balanceOf(entries))
 })
 
@@ -258,7 +265,7 @@ test("one user's spending never touches another's balance", async () => {
   ])
 
   assert.equal(await getBalance("a"), 0)
-  assert.equal(await getBalance("b"), 9)
+  assert.equal(await getBalance("b"), 10 - PRICE.watchlist)
   assert.equal((await readLedger("b")).length, 2)
 })
 

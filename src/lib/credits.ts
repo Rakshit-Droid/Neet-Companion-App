@@ -36,10 +36,15 @@ export interface LedgerEntry {
   createdAt: number
 }
 
-/** Prices, in credits. Single source of truth — never inline these numbers. */
+/**
+ * Prices, in credits. Single source of truth — never inline these numbers.
+ *
+ * `watchlist` is charged per college PER WEEK and renews automatically, not once
+ * at add time. See src/lib/watch-billing.ts for the period rules.
+ */
 export const PRICE = {
   search: 2,
-  watchlist: 1,
+  watchlist: 5,
   stateQuota: 5,
 } as const
 
@@ -54,7 +59,7 @@ export const REASON_LABEL: Record<LedgerReason, string> = {
   purchase: "Credits purchased",
   referral: "Referral bonus",
   search: "Choice list built",
-  watchlist: "College added to watchlist",
+  watchlist: "Watching a college, one week",
   stateQuota: "State quota search",
   refund: "Refund",
 }

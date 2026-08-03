@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics"
 import { radius, space, useTheme } from "@/theme"
 import { Text } from "./Text"
 import { isWatched, removeWatch, addWatch } from "@/lib/watchlist"
+import { periodKey } from "@/lib/watch-billing"
 import { PRICE } from "@/lib/credits"
 import { useSession } from "@/state/session"
 import { useCredits } from "@/state/credits"
@@ -61,8 +62,9 @@ export function WatchButton({ slug, category = "UR", course }: WatchButtonProps)
     }
 
     // Charge first: adding without paying, then failing to charge, would hand
-    // out the feature for free.
-    const ok = await charge(PRICE.watchlist, "watchlist", `watch:${user.uid}:${slug}`, { slug })
+    // out the feature for free. The key is the college's first week, the same
+    // one addWatch starts, so dropping and re-adding inside a paid week is free.
+    const ok = await charge(PRICE.watchlist, "watchlist", periodKey(slug, 1), { slug, week: 1 })
     if (!ok) {
       setDenied(true)
       return
@@ -100,7 +102,7 @@ export function WatchButton({ slug, category = "UR", course }: WatchButtonProps)
           color={on ? t.onAccent : t.textMuted}
         />
         <Text variant="label" tone={on ? "onAccent" : "secondary"}>
-          {on ? "Watching" : `Watch rounds — ${PRICE.watchlist} credit`}
+          {on ? "Watching" : `Watch rounds — ${PRICE.watchlist}/week`}
         </Text>
       </Pressable>
 

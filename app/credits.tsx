@@ -103,14 +103,15 @@ export default function CreditsScreen() {
         <Surface borderRadius={radius.sm} style={{ gap: space.sm }}>
           <PriceRow label="Build a choice list" cost={PRICE.search} />
           <Divider />
-          <PriceRow label="Add a college to your watchlist" cost={PRICE.watchlist} />
+          <PriceRow label="Watch a college, per week" cost={PRICE.watchlist} />
           <Divider />
           <PriceRow label="State quota search" cost={PRICE.stateQuota} />
           <Divider />
           <PriceRow label="Welcome credits on signup" cost={-SIGNUP_GRANT} />
         </Surface>
         <Text variant="caption" tone="muted">
-          Repeating an identical search within 24 hours is not charged again.
+          Repeating an identical search within 24 hours is not charged again. Watching renews
+          every week per college, and stops rather than overdrawing you.
         </Text>
       </View>
 
