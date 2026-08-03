@@ -23,8 +23,11 @@ export default function CollegeDetailScreen() {
   const t = useTheme()
   const { slug } = useLocalSearchParams<{ slug: string }>()
 
+  // All hooks must run before the early return below, or the hook count changes
+  // between renders and React throws.
   const detail = useMemo(() => (slug ? collegeDetail(slug) : null), [slug])
   const faqs = useMemo(() => (slug ? faqsFor(slug) : []), [slug])
+  const matrix = useMemo(() => (slug ? seatMatrix(slug) : null), [slug])
 
   const [category, setCategory] = useState<Category>("UR")
   const [course, setCourse] = useState<Course | "all">("all")
@@ -62,8 +65,6 @@ export default function CollegeDetailScreen() {
     })
     .filter((r): r is { category: Category; closing: number; delta: number | null } => r !== null)
     .sort((a, b) => a.closing - b.closing)
-
-  const matrix = seatMatrix(slug!)
 
   return (
     <Screen title={college.name} back>
@@ -235,7 +236,7 @@ export default function CollegeDetailScreen() {
         </View>
       ) : null}
 
-      {matrix.rows.length ? (
+      {matrix && matrix.rows.length ? (
         <View style={{ gap: space.sm }}>
           <Text variant="label" tone="muted">
             Seat matrix, {latestYear}

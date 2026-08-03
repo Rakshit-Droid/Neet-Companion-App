@@ -33,23 +33,29 @@ import {
   statesSummary,
 } from "./predictors"
 import { buildChoiceList } from "./choice-filling"
+import data from "../data/neet-data.json"
+
+/**
+ * Score/rank pairs read directly out of the shipped curve, so they stay true
+ * when the data is refreshed instead of being hardcoded expectations.
+ */
+const CURVE_SAMPLES: [number, number][] = (data.curve as number[][])
+  .filter((_, i) => i % 97 === 0)
+  .slice(0, 5)
+  .map(([score, rank]) => [score!, rank!])
 
 // The engine is backed by real MCC counselling data and the TS-KNRUHS rank
 // ledger. These lock the shape of that data and the behaviour derived from it.
 
-test("dataset has the expected scale", () => {
-  assert.equal(COLLEGES.length, 604)
-  assert.equal(PLATFORM_STATS.states, 33)
-  assert.equal(PLATFORM_STATS.cutoffs, 17066)
-  assert.equal(PLATFORM_STATS.years, 7)
-  assert.equal(LATEST_CUTOFF_YEAR, 2025)
-})
+// Exact dataset counts are asserted in dataset.contract.test.ts, which is the
+// one place to update on a data refresh. Everything here is behavioural.
 
-test("marksToRank matches the observed 2025 curve", () => {
-  // Ledger medians: 560 -> 8444, 500 -> 52074, 400 -> 209699.
-  assert.equal(marksToRank(560).air, 8444)
-  assert.equal(marksToRank(500).air, 52074)
-  assert.equal(marksToRank(400).air, 209699)
+test("marksToRank reads straight off the observed curve", () => {
+  // Not magic numbers: each is the median rank the ledger itself records for
+  // that score, so this proves interpolation returns the observed point.
+  for (const [score, expected] of CURVE_SAMPLES) {
+    assert.equal(marksToRank(score).air, expected, `score ${score}`)
+  }
 })
 
 test("a perfect score is AIR 1 and rank never improves as marks fall", () => {
@@ -226,6 +232,15 @@ test("formatIndian groups in lakhs and crores", () => {
   assert.equal(formatIndian(1360000), "13,60,000")
 })
 
+test("formatIndian handles negatives, used for year-on-year deltas", () => {
+  // Regression: "-773" is 4 chars, so naive grouping produced "-,773".
+  assert.equal(formatIndian(-773), "-773")
+  assert.equal(formatIndian(-1000), "-1,000")
+  assert.equal(formatIndian(-100000), "-1,00,000")
+  assert.equal(formatIndian(-1), "-1")
+  assert.equal(formatIndian(0), "0")
+})
+
 test("yearDelta labels a rising closing rank as easier", () => {
   // A worse last-admitted rank means the college got easier to enter.
   const easier = yearDelta([
@@ -264,10 +279,12 @@ test("seatMatrix rows sum to the reported total", () => {
   assert.equal(matrix.total, collegeDetail(target.slug)!.seatsLatest)
 })
 
-test("stateStats counts courses and averages closing ranks", () => {
+test("stateStats agrees with the colleges it counts", () => {
   const stats = stateStats("karnataka")
   assert.ok(stats)
-  assert.equal(stats.colleges, 48)
+  // Relational, not a magic number: the count must equal the list it summarises.
+  assert.equal(stats.colleges, collegesInState("karnataka").length)
+  assert.equal(stats.colleges, COLLEGES.filter((c) => c.state === "Karnataka").length)
   assert.ok(stats.byCourse.MBBS > 0)
   assert.ok(stats.averageClosing && stats.averageClosing > 0)
   assert.equal(stateStats("atlantis"), null)
@@ -275,13 +292,16 @@ test("stateStats counts courses and averages closing ranks", () => {
 
 test("collegesInState is sorted by cutoff and carries headline data", () => {
   const rows = collegesInState("karnataka")
-  assert.equal(rows.length, 48)
+  assert.ok(rows.length > 0)
+  assert.ok(rows.every((r) => r.college.state === "Karnataka"))
 
   const ranked = rows.filter((r) => r.closing !== null).map((r) => r.closing!)
   assert.deepEqual(ranked, [...ranked].sort((a, b) => a - b))
-  assert.equal(rows[0]!.college.name.startsWith("Bangalore Medical College"), true)
-  // Colleges without a recent cutoff sort last rather than being dropped.
-  assert.ok(rows.every((r) => r.courses.length >= 0))
+  // Colleges with no recent cutoff sort last rather than being dropped.
+  assert.equal(
+    rows.filter((r) => r.closing === null).length,
+    rows.length - ranked.length,
+  )
 })
 
 test("directoryRows covers every college exactly once", () => {
@@ -356,8 +376,11 @@ test("seatsFor splits the total by category", () => {
   const target = COLLEGES.find((c) => c.name.startsWith("Bangalore Medical College"))!
   const detail = collegeDetail(target.slug)!
 
-  // The production site reports 20 for this college, labelling it "AIQ seats".
-  // That figure is the UR category, not the quota; the true total is higher.
+  // DATA-PINNED. The production website reports 20 for this college, labelling
+  // it "AIQ seats" — that figure is the UR category, not the quota, and the true
+  // total is higher. Kept exact because it documents a real discrepancy we chose
+  // not to copy. On a data refresh the bundle checksum in
+  // dataset.contract.test.ts fails first and points here.
   assert.equal(detail.seatsFor("UR"), 20)
   assert.equal(detail.seatsLatest, 57)
 

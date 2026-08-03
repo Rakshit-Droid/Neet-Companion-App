@@ -179,6 +179,47 @@ const CUTOFFS: Cutoff[] = (data.cutoffs as number[][]).map((r) => ({
   closing: r[5]!,
 }))
 
+// -- indexes ------------------------------------------------------------------
+//
+// Built once at import. Without these, rankToColleges scanned all 17,066 cutoffs
+// per call and directoryRows was O(colleges x cutoffs), which measured 151ms and
+// visibly froze the Colleges tab on open.
+
+const CUTOFFS_BY_COLLEGE = new Map<number, Cutoff[]>()
+for (const cut of CUTOFFS) {
+  const list = CUTOFFS_BY_COLLEGE.get(cut.college)
+  if (list) list.push(cut)
+  else CUTOFFS_BY_COLLEGE.set(cut.college, [cut])
+}
+
+/**
+ * Latest-year cutoffs grouped by `category|course`, each inheriting the global
+ * ascending closing-rank order. A query for rank r wants every row with
+ * closing >= r, which is therefore a contiguous suffix reachable by binary
+ * search rather than a scan.
+ */
+const LATEST_BY_KEY = new Map<string, Cutoff[]>()
+for (const cut of CUTOFFS) {
+  if (cut.year !== LATEST_CUTOFF_YEAR) continue
+  for (const key of [`${cut.category}|${cut.course}`, `${cut.category}|all`]) {
+    const list = LATEST_BY_KEY.get(key)
+    if (list) list.push(cut)
+    else LATEST_BY_KEY.set(key, [cut])
+  }
+}
+
+/** First index whose closing rank is >= rank. Assumes ascending order. */
+function lowerBound(rows: Cutoff[], rank: number): number {
+  let lo = 0
+  let hi = rows.length
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1
+    if (rows[mid]!.closing < rank) lo = mid + 1
+    else hi = mid
+  }
+  return lo
+}
+
 // -- marks to rank ------------------------------------------------------------
 
 const CURVE = data.curve as number[][] // [score, medianRank], score descending
@@ -292,15 +333,22 @@ export function rankToColleges(
   const { limit = 25, states } = options
   const stateFilter = states && states.length ? new Set(states) : null
 
-  const matches: CollegeMatch[] = []
-  for (const cut of CUTOFFS) {
-    if (cut.year !== LATEST_CUTOFF_YEAR) continue
-    if (cut.category !== category) continue
-    if (course !== "all" && cut.course !== course) continue
-    if (r > cut.closing) continue
+  const rows = LATEST_BY_KEY.get(`${category}|${course}`)
+  if (!rows) return { matches: [], total: 0 }
 
+  // Rows are ascending by closing rank, so everything reachable starts here.
+  const start = lowerBound(rows, r)
+
+  const matches: CollegeMatch[] = []
+  let total = 0
+  for (let i = start; i < rows.length; i++) {
+    const cut = rows[i]!
     const college = COLLEGES[cut.college]!
     if (stateFilter && !stateFilter.has(college.stateCode)) continue
+
+    total++
+    // Still walk the rest to keep `total` exact, but stop building objects.
+    if (matches.length >= limit) continue
 
     const margin = r / cut.closing
     const tier: Tier = margin <= 0.6 ? "Safe" : margin <= 0.85 ? "Moderate" : "Reach"
@@ -315,8 +363,7 @@ export function rankToColleges(
     })
   }
 
-  // CUTOFFS is pre-sorted ascending, so the tightest cutoffs come first.
-  return { matches: matches.slice(0, limit), total: matches.length }
+  return { matches, total }
 }
 
 export function marksToColleges(
@@ -331,9 +378,9 @@ export function marksToColleges(
 
 /** Every closing rank recorded for a college, newest first. Powers trend views. */
 export function historyFor(collegeSlug: string): Cutoff[] {
-  const index = COLLEGES.findIndex((c) => c.slug === collegeSlug)
-  if (index < 0) return []
-  return CUTOFFS.filter((c) => c.college === index).sort(
+  const index = INDEX_BY_SLUG.get(collegeSlug)
+  if (index === undefined) return []
+  return [...(CUTOFFS_BY_COLLEGE.get(index) ?? [])].sort(
     (a, b) => b.year - a.year || a.closing - b.closing,
   )
 }
@@ -366,8 +413,19 @@ const ROUNDS: RoundCutoff[] = (data.rounds as number[][]).map((r) => ({
   seats: r[8]!,
 }))
 
+const ROUNDS_BY_COLLEGE = new Map<number, RoundCutoff[]>()
+for (const r of ROUNDS) {
+  const list = ROUNDS_BY_COLLEGE.get(r.college)
+  if (list) list.push(r)
+  else ROUNDS_BY_COLLEGE.set(r.college, [r])
+}
+
+const INDEX_BY_SLUG = new Map<string, number>()
+COLLEGES.forEach((c, i) => INDEX_BY_SLUG.set(c.slug, i))
+
 export function collegeBySlug(slug: string): College | null {
-  return COLLEGES.find((c) => c.slug === slug) ?? null
+  const i = INDEX_BY_SLUG.get(slug)
+  return i === undefined ? null : COLLEGES[i]!
 }
 
 export interface CollegeDetail {
@@ -397,13 +455,18 @@ export interface CollegeDetail {
  * Everything the college page needs, assembled in one pass so the screen does
  * not filter 17k cutoffs and 43k rounds repeatedly while rendering.
  */
+const DETAIL_CACHE = new Map<string, CollegeDetail>()
+
 export function collegeDetail(slug: string): CollegeDetail | null {
-  const index = COLLEGES.findIndex((c) => c.slug === slug)
-  if (index < 0) return null
+  const cached = DETAIL_CACHE.get(slug)
+  if (cached) return cached
+
+  const index = INDEX_BY_SLUG.get(slug)
+  if (index === undefined) return null
   const college = COLLEGES[index]!
 
-  const cuts = CUTOFFS.filter((c) => c.college === index)
-  const rounds = ROUNDS.filter((r) => r.college === index)
+  const cuts = CUTOFFS_BY_COLLEGE.get(index) ?? []
+  const rounds = ROUNDS_BY_COLLEGE.get(index) ?? []
 
   const years = [...new Set(cuts.map((c) => c.year))].sort((a, b) => b - a)
   const latestYear = years[0] ?? LATEST_CUTOFF_YEAR
@@ -420,7 +483,12 @@ export function collegeDetail(slug: string): CollegeDetail | null {
     .filter((r) => r.year === latestYear)
     .sort((a, b) => a.roundOrder - b.roundOrder || a.closing - b.closing)
 
-  return {
+  // Both accessors are called repeatedly per render (once per category chip), so
+  // their results are memoised per detail object rather than recomputed.
+  const seatsCache = new Map<string, number>()
+  const trendCache = new Map<string, { year: number; closing: number }[]>()
+
+  const detail: CollegeDetail = {
     college,
     courses,
     categories,
@@ -429,12 +497,21 @@ export function collegeDetail(slug: string): CollegeDetail | null {
     latest,
     rounds: latestRounds,
     seatsLatest: latestRounds.reduce((n, r) => n + r.seats, 0),
-    seatsFor: (category, course) =>
-      latestRounds
+    seatsFor: (category, course) => {
+      const key = `${category}|${course ?? "all"}`
+      const hit = seatsCache.get(key)
+      if (hit !== undefined) return hit
+      const value = latestRounds
         .filter((r) => r.category === category && (!course || r.course === course))
-        .reduce((n, r) => n + r.seats, 0),
-    trendFor: (category, course) =>
-      cuts
+        .reduce((n, r) => n + r.seats, 0)
+      seatsCache.set(key, value)
+      return value
+    },
+    trendFor: (category, course) => {
+      const key = `${category}|${course ?? "all"}`
+      const hit = trendCache.get(key)
+      if (hit) return hit
+      const value = cuts
         .filter((c) => c.category === category && (!course || c.course === course))
         // A college can have several quotas per year; the tightest is the headline.
         .reduce<{ year: number; closing: number }[]>((acc, c) => {
@@ -443,8 +520,14 @@ export function collegeDetail(slug: string): CollegeDetail | null {
           else if (c.closing < existing.closing) existing.closing = c.closing
           return acc
         }, [])
-        .sort((a, b) => a.year - b.year),
+        .sort((a, b) => a.year - b.year)
+      trendCache.set(key, value)
+      return value
+    },
   }
+
+  DETAIL_CACHE.set(slug, detail)
+  return detail
 }
 
 // -- year-on-year movement ----------------------------------------------------
@@ -553,55 +636,60 @@ export interface StateCollege {
   courses: Course[]
 }
 
+/** Headline latest-year row for one college, computed from its own index slice. */
+function headlineFor(college: College, index: number, withRound: boolean): StateCollege {
+  const mine = CUTOFFS_BY_COLLEGE.get(index) ?? []
+  let head: Cutoff | null = null
+  for (const c of mine) {
+    if (c.year !== LATEST_CUTOFF_YEAR) continue
+    if (!head || c.closing < head.closing) head = c
+  }
+
+  let round: string | null = null
+  if (withRound && head) {
+    for (const r of ROUNDS_BY_COLLEGE.get(index) ?? []) {
+      if (
+        r.year === head.year &&
+        r.category === head.category &&
+        r.course === head.course &&
+        r.closing === head.closing
+      ) {
+        round = r.round
+        break
+      }
+    }
+  }
+
+  return {
+    college,
+    index,
+    closing: head?.closing ?? null,
+    course: head?.course ?? null,
+    category: head?.category ?? null,
+    round,
+    courses: coursesFor(index),
+  }
+}
+
 /** Colleges in a state with their headline latest-year cutoff, for list rows. */
 export function collegesInState(slug: string): StateCollege[] {
-  return COLLEGES.map((college, index) => ({ college, index }))
-    .filter((x) => slugify(x.college.state) === slug)
-    .map(({ college, index }) => {
-      const latest = CUTOFFS.filter(
-        (c) => c.college === index && c.year === LATEST_CUTOFF_YEAR,
-      ).sort((a, b) => a.closing - b.closing)
-      const head = latest[0] ?? null
-      const round =
-        head &&
-        ROUNDS.filter(
-          (r) =>
-            r.college === index &&
-            r.year === head.year &&
-            r.category === head.category &&
-            r.course === head.course &&
-            r.closing === head.closing,
-        )[0]?.round
-      return {
-        college,
-        index,
-        closing: head?.closing ?? null,
-        course: head?.course ?? null,
-        category: head?.category ?? null,
-        round: round ?? null,
-        courses: coursesFor(index),
-      }
-    })
-    .sort((a, b) => (a.closing ?? Infinity) - (b.closing ?? Infinity))
+  const out: StateCollege[] = []
+  COLLEGES.forEach((college, index) => {
+    if (slugify(college.state) !== slug) return
+    out.push(headlineFor(college, index, true))
+  })
+  return out.sort((a, b) => (a.closing ?? Infinity) - (b.closing ?? Infinity))
 }
+
+// Every college, every launch of the Colleges tab. Computed once.
+let DIRECTORY_CACHE: StateCollege[] | null = null
 
 /** Latest headline cutoff for every college, used by the directory rows. */
 export function directoryRows(): StateCollege[] {
-  return COLLEGES.map((college, index) => {
-    const latest = CUTOFFS.filter(
-      (c) => c.college === index && c.year === LATEST_CUTOFF_YEAR,
-    ).sort((a, b) => a.closing - b.closing)
-    const head = latest[0] ?? null
-    return {
-      college,
-      index,
-      closing: head?.closing ?? null,
-      course: head?.course ?? null,
-      category: head?.category ?? null,
-      round: null,
-      courses: coursesFor(index),
-    }
-  })
+  if (!DIRECTORY_CACHE) {
+    DIRECTORY_CACHE = COLLEGES.map((college, index) => headlineFor(college, index, false))
+  }
+  return DIRECTORY_CACHE
 }
 
 export const COLLEGE_TYPES: string[] = [...new Set(COLLEGES.map((c) => c.type))].sort()
@@ -790,8 +878,7 @@ export function collegesByState(slug: string): { state: string; colleges: Colleg
 /** Lowest UR closing rank recorded for a college in the latest year. */
 export function bestClosingFor(collegeIndex: number): number | null {
   let best: number | null = null
-  for (const cut of CUTOFFS) {
-    if (cut.college !== collegeIndex) continue
+  for (const cut of CUTOFFS_BY_COLLEGE.get(collegeIndex) ?? []) {
     if (cut.year !== LATEST_CUTOFF_YEAR || cut.category !== "UR") continue
     if (best === null || cut.closing < best) best = cut.closing
   }
@@ -801,8 +888,8 @@ export function bestClosingFor(collegeIndex: number): number | null {
 /** Courses a college actually offered in the latest year. */
 export function coursesFor(collegeIndex: number): Course[] {
   const out: Course[] = []
-  for (const cut of CUTOFFS) {
-    if (cut.college !== collegeIndex || cut.year !== LATEST_CUTOFF_YEAR) continue
+  for (const cut of CUTOFFS_BY_COLLEGE.get(collegeIndex) ?? []) {
+    if (cut.year !== LATEST_CUTOFF_YEAR) continue
     if (!out.includes(cut.course)) out.push(cut.course)
   }
   return out
@@ -817,9 +904,13 @@ export const PLATFORM_STATS = {
 }
 
 export function formatIndian(n: number): string {
-  const s = Math.round(n).toString()
-  if (s.length <= 3) return s
+  const rounded = Math.round(n)
+  // Sign is stripped before grouping: otherwise "-773" is four characters and
+  // gets split into "-" + "," + "773".
+  const sign = rounded < 0 ? "-" : ""
+  const s = Math.abs(rounded).toString()
+  if (s.length <= 3) return sign + s
   const last3 = s.slice(-3)
   const rest = s.slice(0, -3)
-  return rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3
+  return sign + rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3
 }
