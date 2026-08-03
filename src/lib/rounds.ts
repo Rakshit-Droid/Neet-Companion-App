@@ -191,15 +191,29 @@ function rawVerdict(spread: RoundSpread, rank: number): RoundVerdict {
  * 21,742. Reporting that as a downgrade would be reading noise as a trend.
  */
 function withVerdicts(stats: RoundStats[], rank: number): RoundEvidence[] {
+  // A non-finite rank would survive Math.round and then lose every comparison,
+  // grading a seat "unlikely" on nothing. Callers guard against it, so reaching
+  // here with one is a bug worth surfacing rather than papering over.
+  if (!Number.isFinite(rank)) throw new Error(`rank must be a finite number, got ${rank}`)
   const r = Math.max(1, Math.round(rank))
   let carried: RoundVerdict = "no-data"
 
   return stats.map((s) => {
-    if (!s.spread) return { ...s, verdict: "no-data" }
-    let verdict = rawVerdict(s.spread, r)
+    // years and spread are lifted out of the shared stats cache, not aliased
+    // into it. A caller sorting years in place or clamping a spread would
+    // otherwise corrupt every later lookup for this seat, including the
+    // verdicts computed from it.
+    const copy = {
+      ...s,
+      years: [...s.years],
+      spread: s.spread ? { ...s.spread } : null,
+    }
+
+    if (!copy.spread) return { ...copy, verdict: "no-data" as const }
+    let verdict = rawVerdict(copy.spread, r)
     if (verdictStrength(carried) > verdictStrength(verdict)) verdict = carried
     carried = verdict
-    return { ...s, verdict }
+    return { ...copy, verdict }
   })
 }
 

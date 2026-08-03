@@ -344,3 +344,73 @@ test("a verdict is anchored to the tightest year, not the loosest", () => {
     assert.equal(at(spread.best + 1), "unlikely")
   }
 })
+
+/**
+ * The middle of the ladder had no coverage: mutating the "likely" branch to a
+ * bound that line 177 has already returned on makes the rung unreachable, and
+ * the suite stayed green because nothing probed a rank strictly between the
+ * tightest and loosest years.
+ */
+test("every rung of the ladder is reachable, including likely", () => {
+  const probes = SEATS.flatMap((seat) => {
+    const first = roundEvidence(seat.slug, seat.category, seat.course, seat.quota, 1).find(
+      (r) => r.spread !== null,
+    )
+    if (!first) return []
+    return [{ seat, spread: first.spread!, round: first.round }]
+  }).slice(0, 400)
+
+  const at = (seat: Seat, round: string, rank: number) =>
+    roundEvidence(seat.slug, seat.category, seat.course, seat.quota, rank).find(
+      (r) => r.round === round,
+    )!.verdict
+
+  const seen = new Set<string>()
+  for (const { seat, spread, round } of probes) {
+    // Guarded: the three bounds coincide when a round only ever closed once.
+    if (spread.worst < spread.median) {
+      assert.equal(at(seat, round, spread.median), "likely")
+      seen.add("likely")
+    }
+    if (spread.median < spread.best) {
+      assert.equal(at(seat, round, spread.median + 1), "contested")
+      seen.add("contested")
+    }
+    seen.add(at(seat, round, spread.worst))
+    seen.add(at(seat, round, spread.best + 1))
+  }
+
+  // Proves the rungs above were actually exercised rather than skipped by the guards.
+  for (const rung of ["clear", "likely", "contested", "unlikely"]) {
+    assert.ok(seen.has(rung), `no seat in the bundle produced "${rung}"`)
+  }
+})
+
+test("evidence handed to a caller is not aliased into the shared cache", () => {
+  const seat = SEATS[0]!
+  const read = () => roundEvidence(seat.slug, seat.category, seat.course, seat.quota, 5000)
+
+  const before = read()
+  const graded = before.find((r) => r.spread !== null)
+  assert.ok(graded, "first seat has no graded round")
+
+  // What a consumer might innocently do while rendering.
+  graded.years.reverse()
+  graded.spread!.best = 0
+
+  const after = read()
+  const same = after.find((r) => r.round === graded.round)!
+  assert.deepEqual(same.years, [...same.years].sort((a, b) => a - b), "years order was corrupted")
+  assert.notEqual(same.spread!.best, 0, "spread was corrupted")
+  assert.equal(same.verdict, graded.verdict, "verdict changed for the next caller")
+})
+
+test("a non-finite rank is rejected rather than silently graded", () => {
+  const seat = SEATS[0]!
+  for (const bad of [NaN, Infinity, -Infinity]) {
+    assert.throws(
+      () => roundEvidence(seat.slug, seat.category, seat.course, seat.quota, bad),
+      /finite/,
+    )
+  }
+})
