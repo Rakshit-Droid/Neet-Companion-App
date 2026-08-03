@@ -61,3 +61,7 @@ data/api-dump.json
 # scratch file for pasting the firebaseConfig block into. Windows adds a
 # second extension when you name a file in the editor, hence the glob.
 firebase.txt*
+
+# Firebase service account keys. These can act as the whole project.
+service-account*.json
+*-firebase-adminsdk-*.json

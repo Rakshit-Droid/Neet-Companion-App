@@ -35,6 +35,7 @@
     "web": "expo start --web",
     "firebase:config": "node scripts/set-firebase-config.mjs",
     "firebase:verify": "node scripts/verify-firebase.mjs",
+    "firebase:templates": "node scripts/set-firebase-templates.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node -e \"require(\\\"fs\\\").rmSync(\\\".tmp-test\\\",{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test \".tmp-test/**/*.test.js\"",
     "backtest": "npm test --silent >/dev/null 2>&1; node scripts/backtest.mjs"
