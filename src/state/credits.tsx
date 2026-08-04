@@ -10,6 +10,8 @@ import {
 
 import { useSession } from "./session"
 import {
+  PACK_PRICE_INR,
+  PRICE,
   CREDITS_PER_PACK,
   InsufficientCreditsError,
   getBalance,
@@ -22,7 +24,8 @@ import {
 } from "@/lib/credits"
 import { installPersistentLedger } from "@/lib/credits-store"
 import { installPersistentReferrals } from "@/lib/referrals-store"
-import { settleReferralOnPurchase } from "@/lib/referrals"
+import { claimReferralCode, settleReferralOnPurchase } from "@/lib/referrals"
+import { sendProductEmail } from "@/lib/product-email"
 
 installPersistentLedger()
 installPersistentReferrals()
@@ -99,8 +102,22 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     async (amount, reason, idempotencyKey, meta) => {
       if (!uid) return false
       try {
-        await spend(uid, amount, reason, idempotencyKey, meta)
+        const result = await spend(uid, amount, reason, idempotencyKey, meta)
         await refresh()
+
+        // Warn once the balance can no longer cover a choice list. Rate limited
+        // to one a week inside sendProductEmail — a balance hovering under the
+        // threshold would otherwise email on every single spend.
+        if (result.balance < PRICE.search) {
+          const code = await claimReferralCode(uid).catch(() => "")
+          void sendProductEmail(uid, "creditsLow", {
+            balance: result.balance,
+            searchPrice: PRICE.search,
+            packCredits: CREDITS_PER_PACK,
+            packPriceInr: PACK_PRICE_INR,
+            referralCode: code,
+          })
+        }
         return true
       } catch (err) {
         if (err instanceof InsufficientCreditsError) return false
@@ -116,7 +133,20 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
       await grant(uid, CREDITS_PER_PACK, "purchase", idempotencyKey)
       // The referrer is paid off the buyer's first pack, never off their signup.
       // Safe to call on every purchase: it settles at most once per referee.
-      await settleReferralOnPurchase(uid)
+      const settlement = await settleReferralOnPurchase(uid)
+
+      // "paid" only. Racing settlements all reach the payout branch but only one
+      // moves credits, so emailing on anything else would notify several times
+      // for a single payout. Tagged by referee so each friend mails once.
+      if (settlement.status === "paid") {
+        const referrer = settlement.referral.referrerUid
+        void sendProductEmail(
+          referrer,
+          "referralPaid",
+          { reward: settlement.credits, referralCode: await claimReferralCode(referrer) },
+          uid,
+        )
+      }
       await refresh()
     },
     [uid, refresh],

@@ -17,6 +17,9 @@ import {
 } from "@/lib/watchlist"
 import { PRICE } from "@/lib/credits"
 import { useCredits } from "@/state/credits"
+import { sendProductEmail } from "@/lib/product-email"
+import { useSession } from "@/state/session"
+import { collegeBySlug } from "@/lib/predictors"
 import { Button } from "@/components/Button"
 import { RoundLadder } from "@/components/RoundLadder"
 import { roundEvidence, type RoundEvidence } from "@/lib/rounds"
@@ -25,7 +28,8 @@ import { useProfile } from "@/state/profile"
 export default function WatchlistScreen() {
   const t = useTheme()
   const { profile } = useProfile()
-  const { charge } = useCredits()
+  const { charge, balance } = useCredits()
+  const { user } = useSession()
   const [items, setItems] = useState<WatchStatus[] | null>(null)
   const [renewing, setRenewing] = useState<string | null>(null)
 
@@ -35,14 +39,33 @@ export default function WatchlistScreen() {
   const load = useCallback(() => {
     let cancelled = false
     ;(async () => {
-      await renewDueWatches((amount, key, meta) => charge(amount, "watchlist", key, meta))
+      const { lapsed } = await renewDueWatches((amount, key, meta) =>
+        charge(amount, "watchlist", key, meta),
+      )
       const v = await listWatches()
       if (!cancelled) setItems(v)
+
+      // Only when a renewal actually failed. A renewal that succeeds is a
+      // silent automatic charge, and emailing about it would be noise.
+      if (lapsed.length && user) {
+        void sendProductEmail(user.uid, "watchExpiring", {
+          watchPrice: PRICE.watchlist,
+          balance,
+          colleges: lapsed.map((slug) => {
+            const college = collegeBySlug(slug)
+            return {
+              name: college?.name ?? slug,
+              state: college?.state ?? "",
+              daysLeft: 0,
+            }
+          }),
+        })
+      }
     })()
     return () => {
       cancelled = true
     }
-  }, [charge])
+  }, [charge, user, balance])
 
   async function renewOne(slug: string) {
     setRenewing(slug)

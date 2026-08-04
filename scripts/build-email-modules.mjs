@@ -15,13 +15,24 @@ const SOURCES = {
   passwordReset: "emails/password-reset.html",
   signInLink: "emails/sign-in-link.html",
   verifyEmail: "emails/verify-email.html",
+  welcome: "emails/welcome.html",
+  creditsLow: "emails/credits-low.html",
+  watchExpiring: "emails/watch-expiring.html",
+  referralPaid: "emails/referral-paid.html",
 }
 
 const SUBJECTS = {
   passwordReset: "Reset your NEET Companion password",
   signInLink: "Your NEET Companion sign-in link",
   verifyEmail: "Confirm your email for NEET Companion",
+  welcome: "Welcome to NEET Companion",
+  creditsLow: "You are low on credits",
+  watchExpiring: "A college you watch is about to stop being tracked",
+  referralPaid: "You earned 50 credits",
 }
+
+/** Only the auth templates carry a one-time link; product emails do not. */
+const NEEDS_LINK = new Set(["passwordReset", "signInLink", "verifyEmail"])
 
 /** Strips the authoring comments and BODY markers; keeps the markup itself. */
 function clean(html) {
@@ -38,7 +49,7 @@ const out = [
 
 for (const [key, file] of Object.entries(SOURCES)) {
   const html = clean(readFileSync(file, "utf8"))
-  if (!html.includes("%LINK%")) {
+  if (NEEDS_LINK.has(key) && !html.includes("%LINK%")) {
     console.error(`${file} has no %LINK% — the email would have nothing to click.`)
     process.exit(1)
   }

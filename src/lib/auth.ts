@@ -26,6 +26,7 @@ import {
   mockSignUp,
   mockWatchAuth,
 } from "./mock-auth"
+import { SIGNUP_GRANT } from "./credits"
 import type { AuthUser } from "./auth-types"
 
 export { isFirebaseConfigured, isMockAuthEnabled }
@@ -109,7 +110,16 @@ export async function signUp(
   if (displayName?.trim()) {
     await updateProfile(cred.user, { displayName: displayName.trim() })
   }
-  return toAuthUser(cred.user)
+  const user = toAuthUser(cred.user)
+
+  // Fire-and-forget: a welcome email must never be able to fail a signup.
+  // Imported lazily to keep the auth module free of a cycle, since
+  // product-email needs getIdToken from here.
+  import("./product-email")
+    .then((m) => m.sendProductEmail(user.uid, "welcome", { credits: SIGNUP_GRANT }))
+    .catch(() => {})
+
+  return user
 }
 
 export async function signIn(email: string, password: string): Promise<AuthUser> {
