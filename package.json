@@ -35,6 +35,7 @@
     "web": "expo start --web",
     "firebase:config": "node scripts/set-firebase-config.mjs",
     "firebase:verify": "node scripts/verify-firebase.mjs",
+    "verify:authdomain": "node scripts/verify-auth-domain.mjs",
     "firebase:templates": "node scripts/set-firebase-templates.mjs",
     "build:emails": "node scripts/build-email-modules.mjs",
     "typecheck": "tsc --noEmit",
