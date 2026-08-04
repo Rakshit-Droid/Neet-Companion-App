@@ -47,6 +47,37 @@ const CONTINUE_URL =
 
 const FROM = process.env.EMAIL_FROM ?? "NEET Companion <no-reply@forms.neetcompanion.com>"
 
+/**
+ * Puts the action link on our own domain.
+ *
+ * Firebase always generates it on <project>.firebaseapp.com, and the project
+ * config that would change it is locked — callbackUri is refused with the same
+ * EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED as the templates. Since we compose the email
+ * ourselves, we can swap the host instead: the path and query are identical, so
+ * the link works as long as AUTH_LINK_DOMAIN resolves to the same Firebase
+ * Hosting site.
+ *
+ * Off unless AUTH_LINK_DOMAIN is set. Pointing it at a domain that is not
+ * actually serving Firebase's handler would break every reset, so this stays
+ * inert until the DNS is real.
+ *
+ * The link cannot be made SHORT — oobCode is the one-time secret and apiKey
+ * tells the handler which project to talk to. Only the domain is ours to change.
+ */
+function brandLink(link) {
+  const custom = process.env.AUTH_LINK_DOMAIN
+  if (!custom) return link
+  try {
+    const url = new URL(link)
+    // Only rewrite Firebase's own host, never anything else that turns up here.
+    if (!url.hostname.endsWith(".firebaseapp.com")) return link
+    url.hostname = custom
+    return url.toString()
+  } catch {
+    return link
+  }
+}
+
 async function deliver({ to, subject, html }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -109,7 +140,8 @@ export default async function handler(req, res) {
           })
 
     const template = type === "reset" ? passwordReset : signInLink
-    const html = template.html.replaceAll("%LINK%", link).replaceAll("%EMAIL%", email)
+    const branded = brandLink(link)
+    const html = template.html.replaceAll("%LINK%", branded).replaceAll("%EMAIL%", email)
 
     await deliver({ to: email, subject: template.subject, html })
     return res.status(200).json({ ok: true })
