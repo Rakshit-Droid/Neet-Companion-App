@@ -5,7 +5,11 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/((?!api/|_expo|assets|favicon\\.ico|metadata\\.json).*)",
+      "source": "/__/auth/:path*",
+      "destination": "https://neet-companion-4c9bb.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/((?!api/|__/|_expo|assets|favicon\\.ico|metadata\\.json).*)",
       "destination": "/index.html"
     }
   ],
