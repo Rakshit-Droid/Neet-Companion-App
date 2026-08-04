@@ -1,6 +1,6 @@
 import { createSign } from "node:crypto"
 
-import { passwordReset, signInLink } from "./_templates.mjs"
+import { passwordReset, signInLink, verifyEmail } from "./_templates.mjs"
 
 /**
  * Sends the auth emails ourselves instead of letting Firebase compose them.
@@ -79,18 +79,28 @@ async function accessToken() {
  * it requires an OAuth token rather than the public API key — which is exactly
  * why this runs on a server and not in the app.
  */
+const REQUEST_TYPE = {
+  reset: "PASSWORD_RESET",
+  signin: "EMAIL_SIGNIN",
+  verify: "VERIFY_EMAIL",
+}
+
+const TEMPLATE = {
+  reset: passwordReset,
+  signin: signInLink,
+  verify: verifyEmail,
+}
+
 async function generateLink(type, email) {
   const token = await accessToken()
-  const body =
-    type === "reset"
-      ? { requestType: "PASSWORD_RESET", email, returnOobLink: true }
-      : {
-          requestType: "EMAIL_SIGNIN",
-          email,
-          returnOobLink: true,
-          continueUrl: CONTINUE_URL,
-          canHandleCodeInApp: true,
-        }
+  const body = { requestType: REQUEST_TYPE[type], email, returnOobLink: true }
+
+  // Only the sign-in link comes back into the app; the other two are handled
+  // entirely on Firebase's action page.
+  if (type === "signin") {
+    body.continueUrl = CONTINUE_URL
+    body.canHandleCodeInApp = true
+  }
 
   const res = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode", {
     method: "POST",
@@ -151,7 +161,7 @@ export default async function handler(req, res) {
       hasResendKey: Boolean(process.env.RESEND_API_KEY),
       linkDomain: process.env.AUTH_LINK_DOMAIN ?? "firebase default",
       node: process.version,
-      templates: 2,
+      templates: Object.keys(TEMPLATE).length,
     })
   }
 
@@ -164,13 +174,13 @@ export default async function handler(req, res) {
   if (typeof email !== "string" || !email.includes("@")) {
     return res.status(400).json({ error: "A valid email is required" })
   }
-  if (type !== "reset" && type !== "signin") {
-    return res.status(400).json({ error: 'type must be "reset" or "signin"' })
+  if (!REQUEST_TYPE[type]) {
+    return res.status(400).json({ error: 'type must be "reset", "signin" or "verify"' })
   }
 
   try {
     const link = brandLink(await generateLink(type, email.trim()))
-    const template = type === "reset" ? passwordReset : signInLink
+    const template = TEMPLATE[type]
     const html = template.html.replaceAll("%LINK%", link).replaceAll("%EMAIL%", email.trim())
 
     await deliver({ to: email.trim(), subject: template.subject, html })

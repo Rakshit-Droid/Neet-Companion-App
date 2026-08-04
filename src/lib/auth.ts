@@ -138,7 +138,10 @@ function apiBase(): string {
  * endpoint could not do it, so the caller can fall back rather than strand
  * someone who cannot get into their account.
  */
-async function sendViaApi(type: "reset" | "signin", email: string): Promise<boolean> {
+async function sendViaApi(
+  type: "reset" | "signin" | "verify",
+  email: string,
+): Promise<boolean> {
   try {
     const res = await fetch(`${apiBase()}/api/auth-email`, {
       method: "POST",
@@ -175,6 +178,18 @@ export async function getIdToken(forceRefresh = false): Promise<string | null> {
   const user = auth?.currentUser
   if (!user) return null
   return user.getIdToken(forceRefresh)
+}
+
+/**
+ * Asks the user to confirm their address.
+ *
+ * Nothing calls this yet — the app does not gate anything on a verified email.
+ * It exists so that when something does, it sends the designed email rather than
+ * Firebase's default, which is the one template we cannot edit.
+ */
+export async function sendVerification(email: string): Promise<boolean> {
+  if (isMockAuthEnabled) return true
+  return sendViaApi("verify", email)
 }
 
 // -- magic link ---------------------------------------------------------------
