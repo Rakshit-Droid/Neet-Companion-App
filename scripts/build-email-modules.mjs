@@ -49,9 +49,9 @@ for (const [key, file] of Object.entries(SOURCES)) {
   out.push("")
 }
 
-writeFileSync("api/_templates.js", out.join("\n"))
+writeFileSync("api/_templates.mjs", out.join("\n"))
 
-console.log("wrote api/_templates.js")
+console.log("wrote api/_templates.mjs")
 for (const [key, file] of Object.entries(SOURCES)) {
   console.log(`  ${key.padEnd(15)} from ${file}`)
 }
