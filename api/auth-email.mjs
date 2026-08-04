@@ -1,7 +1,27 @@
-import { initializeApp, cert, getApps } from "firebase-admin/app"
-import { getAuth } from "firebase-admin/auth"
-
 import { passwordReset, signInLink } from "./_templates.mjs"
+
+// firebase-admin is imported lazily, inside the handler.
+//
+// Importing it at module scope means any problem loading it — a missing
+// dependency, a runtime mismatch — crashes the module before the handler runs,
+// and the platform can only answer FUNCTION_INVOCATION_FAILED with no detail.
+// That is exactly what happened, and it cost an hour of guessing. Loading it
+// here turns the same failure into a readable message.
+let adminAuth = null
+
+async function getAdminAuth() {
+  if (adminAuth) return adminAuth
+  const { initializeApp, cert, getApps } = await import("firebase-admin/app")
+  const { getAuth } = await import("firebase-admin/auth")
+
+  if (!getApps().length) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT
+    if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT is not set")
+    initializeApp({ credential: cert(JSON.parse(raw)) })
+  }
+  adminAuth = getAuth()
+  return adminAuth
+}
 
 /**
  * Sends the auth emails ourselves instead of letting Firebase compose them.
@@ -27,14 +47,6 @@ const CONTINUE_URL =
 
 const FROM = process.env.EMAIL_FROM ?? "NEET Companion <no-reply@forms.neetcompanion.com>"
 
-function admin() {
-  if (getApps().length) return getAuth()
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT
-  if (!raw) throw new Error("FIREBASE_SERVICE_ACCOUNT is not set")
-  initializeApp({ credential: cert(JSON.parse(raw)) })
-  return getAuth()
-}
-
 async function deliver({ to, subject, html }) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -52,8 +64,28 @@ async function deliver({ to, subject, html }) {
 }
 
 export default async function handler(req, res) {
+  // GET is a health check. It reports whether the pieces this function needs are
+  // present without revealing any of them, so a deployment can be diagnosed
+  // without log access.
+  if (req.method === "GET") {
+    let adminImport = "ok"
+    try {
+      await import("firebase-admin/app")
+    } catch (err) {
+      adminImport = err?.message ?? "failed"
+    }
+    return res.status(200).json({
+      ok: true,
+      hasServiceAccount: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
+      hasResendKey: Boolean(process.env.RESEND_API_KEY),
+      adminImport,
+      node: process.version,
+      templates: Object.keys({ passwordReset, signInLink }).length,
+    })
+  }
+
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST")
+    res.setHeader("Allow", "GET, POST")
     return res.status(405).json({ error: "Use POST" })
   }
 
@@ -66,7 +98,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const auth = admin()
+    const auth = await getAdminAuth()
 
     const link =
       type === "reset"
