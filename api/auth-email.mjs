@@ -154,7 +154,15 @@ export default async function handler(req, res) {
     // enumeration protection does the same thing.
     if (code === "auth/user-not-found") return res.status(200).json({ ok: true })
 
+    // The code and message travel back with the 500 on purpose. Without log
+    // access a bare "could not send" is undiagnosable, and neither field carries
+    // a credential — Firebase codes are public constants and Resend's errors
+    // describe the message, not the key.
     console.error("auth-email failed:", code || err?.message, err)
-    return res.status(500).json({ error: "Could not send the email" })
+    return res.status(500).json({
+      error: "Could not send the email",
+      code: code || null,
+      detail: String(err?.message ?? err).slice(0, 300),
+    })
   }
 }
