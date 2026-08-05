@@ -101,7 +101,10 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       hasResendKey: Boolean(process.env.RESEND_API_KEY),
-      hasFirebaseKey: Boolean(process.env.FIREBASE_API_KEY),
+      // The effective value, not just the environment variable. Reporting false
+      // while the built-in fallback is working reads as broken when it is not.
+      hasFirebaseKey: Boolean(FIREBASE_API_KEY),
+      firebaseKeySource: process.env.FIREBASE_API_KEY ? "env" : "built-in",
       types: Object.keys(TEMPLATE),
     })
   }
