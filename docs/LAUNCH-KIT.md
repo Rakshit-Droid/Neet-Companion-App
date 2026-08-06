@@ -2,6 +2,10 @@
 
 Prompts for generating posters, banners and social posts, plus captions.
 
+Day 2 onward lives in [CONTENT-DAY-2.md](CONTENT-DAY-2.md). Sections 0 and 5
+below — the brand block and the publishing rules — apply to every day, and are
+not repeated there.
+
 Everything here is built on what the app actually does. Nothing claims a
 predicted rank, an admission chance, or a guarantee — the product deliberately
 refuses to show allotment percentages, and marketing that promises them would be
